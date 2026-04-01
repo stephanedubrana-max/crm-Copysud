@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0048)file:///Users/laptopNiou/Downloads/index_35.html -->
+<!-- saved from url=(0048)file:///Users/laptopNiou/Downloads/index_36.html -->
 <html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -302,6 +302,21 @@ td{padding:9px 10px;font-size:13px}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Toggle type affaire */
+.type-toggle{display:flex;gap:6px;margin:4px 0;}
+.type-btn{flex:1;padding:8px 4px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;}
+.type-btn.active-conquete{border-color:#ff9f43;background:rgba(255,159,67,.15);color:#ff9f43;}
+.type-btn.active-renouvellement{border-color:#4f7cff;background:rgba(79,124,255,.15);color:#4f7cff;}
+.type-btn.active-additionnelle{border-color:#26de81;background:rgba(38,222,129,.15);color:#26de81;}
+.type-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;}
+.badge-conquete{background:rgba(255,159,67,.2);color:#ff9f43;}
+.badge-renouvellement{background:rgba(79,124,255,.2);color:#4f7cff;}
+.badge-additionnelle{background:rgba(38,222,129,.2);color:#26de81;}
+.type-kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;}
+.type-kpi-icon{font-size:20px;}
+.type-kpi-val{font-family:'DM Serif Display',serif;font-size:22px;font-weight:700;}
+.type-kpi-label{font-size:11px;color:var(--muted);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -1401,6 +1416,17 @@ td{padding:9px 10px;font-size:13px}
         <div class="fg"><div class="fl">Produit / Segment</div><select class="fi" id="f-prod"><option>PRINT</option><option>IMPRIMANTE</option><option>CENTREX</option><option>ZEENDOC</option><option>ENC</option></select></div>
         <div class="fg"><div class="fl">Catégorie (libre)</div><input class="fi" type="text" id="f-categorie" placeholder="Stratégique, Récurrent..."></div>
       </div>
+      <div class="fr" style="margin-bottom:10px">
+        <div class="fg" style="flex:1">
+          <div class="fl">Type d'affaire</div>
+          <div class="type-toggle">
+            <button class="type-btn" id="type-btn-conquete" onclick="setTypeAffaire(&#39;Conquete&#39;)">🏹 Conquête</button>
+            <button class="type-btn" id="type-btn-renouvellement" onclick="setTypeAffaire(&#39;Renouvellement&#39;)">🔄 Renouvellement</button>
+            <button class="type-btn" id="type-btn-additionnelle" onclick="setTypeAffaire(&#39;Additionnelle&#39;)">➕ Additionnelle</button>
+          </div>
+          <input type="hidden" id="f-type-affaire" value="">
+        </div>
+      </div>
       <div class="fsec" style="color:var(--accent2)">Valorisation</div>
       <div class="fr3">
         <div class="fg"><div class="fl">Chiffre d'affaires (€)</div><input class="fi" type="number" id="f-ca" placeholder="ex: 60 000" min="0" oninput="updateTaux()"></div>
@@ -1450,6 +1476,15 @@ td{padding:9px 10px;font-size:13px}
       <div class="fr" style="margin-bottom:10px">
         <div class="fg"><div class="fl">Téléphone</div><input class="fi" type="tel" id="f-tel2" placeholder="05 61 00 00 00"></div>
         <div class="fg"><div class="fl">Email</div><input class="fi" type="email" id="f-email2" placeholder="m.dupont@societe.fr"></div>
+      </div>
+      <div class="fsec" style="color:var(--muted)">Interlocuteur tertiaire</div>
+      <div class="fr" style="margin-bottom:10px">
+        <div class="fg"><div class="fl">Nom &amp; Prénom</div><input class="fi" type="text" id="f-int3" placeholder="Paul Durand"></div>
+        <div class="fg"><div class="fl">Poste / Fonction</div><input class="fi" type="text" id="f-poste3" placeholder="Utilisateur"></div>
+      </div>
+      <div class="fr" style="margin-bottom:10px">
+        <div class="fg"><div class="fl">Téléphone</div><input class="fi" type="tel" id="f-tel3" placeholder="06 12 34 56 78"></div>
+        <div class="fg"><div class="fl">Email</div><input class="fi" type="email" id="f-email3" placeholder="p.durand@societe.fr"></div>
       </div>
     </div>
 
@@ -1853,6 +1888,21 @@ function commRegion(name){const r=cfg.regions.find(r=>(cfg.commerciaux[r.id]||[]
 // ════════════════════════════════════════
 // AUTH
 // ════════════════════════════════════════
+
+function setTypeAffaire(type){
+  document.getElementById('f-type-affaire').value=type;
+  ['conquete','renouvellement','additionnelle'].forEach(function(t){
+    var btn=document.getElementById('type-btn-'+t);
+    if(btn) btn.className='type-btn'+(type.toLowerCase()===t?' active-'+t:'');
+  });
+}
+function getTypeBadge(type){
+  if(!type)return '';
+  var t=type.toLowerCase();
+  var icons={'conquete':'🏹','renouvellement':'🔄','additionnelle':'➕'};
+  var cls={'conquete':'badge-conquete','renouvellement':'badge-renouvellement','additionnelle':'badge-additionnelle'};
+  return '<span class="type-badge '+(cls[t]||'')+'">'+(icons[t]||'')+'&nbsp;'+type+'</span>';
+}
 function initLogin(){
   const sel=document.getElementById('login-user');
   sel.innerHTML='<option value="">-- Choisir --</option>'+
@@ -2084,6 +2134,7 @@ function renderTable(data){
       ${showR?`<td style="color:${regionColor(a.regionId)};font-size:12px">${regionById(a.regionId).name}</td>`:''}
       <td><span class="tag tag-prod">${a.produit}</span></td>
       <td>${badge}</td>
+      <td>${a.typeAffaire?getTypeBadge(a.typeAffaire):'<span style="color:var(--muted);font-size:10px">—</span>'}</td>
       <td style="font-size:11px;color:var(--muted)">${a.categorie||'—'}</td>
       <td style="color:var(--muted)">${a.ca?fmt(a.ca):'—'}</td>
       <td style="font-weight:700;color:var(--accent2)">${a.marge?fmt(a.marge):'—'}</td>
@@ -2276,6 +2327,28 @@ function renderDashboard(data){
   ${buildQuarterWidget(data)}
 
   ${objHtml}
+
+  <div class="chart-card" style="margin-bottom:14px">
+    <div class="chart-title">🎯 Profil du pipeline actif</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
+      ${(()=>{
+        var actT=data.filter(function(a){return a.stade!=='Order'&&a.stade!=='Perdu';});
+        var nC=actT.filter(function(a){return a.typeAffaire==='Conquete';}).length;
+        var nR=actT.filter(function(a){return a.typeAffaire==='Renouvellement';}).length;
+        var nA=actT.filter(function(a){return a.typeAffaire==='Additionnelle';}).length;
+        var nN=actT.filter(function(a){return !a.typeAffaire;}).length;
+        var tot=actT.length||1;
+        return '<div class="type-kpi-card"><div class="type-kpi-icon">🏹</div><div><div class="type-kpi-val" style="color:#ff9f43">'+nC+'</div><div class="type-kpi-label">Conquête<br><span style="color:#ff9f43">'+Math.round(nC/tot*100)+'%</span></div></div></div>'
+          +'<div class="type-kpi-card"><div class="type-kpi-icon">🔄</div><div><div class="type-kpi-val" style="color:#4f7cff">'+nR+'</div><div class="type-kpi-label">Renouvellement<br><span style="color:#4f7cff">'+Math.round(nR/tot*100)+'%</span></div></div></div>'
+          +'<div class="type-kpi-card"><div class="type-kpi-icon">➕</div><div><div class="type-kpi-val" style="color:#26de81">'+nA+'</div><div class="type-kpi-label">Additionnelle<br><span style="color:#26de81">'+Math.round(nA/tot*100)+'%</span></div></div></div>';
+      })()}
+    </div>
+    ${(()=>{
+      var actT=data.filter(function(a){return a.stade!=='Order'&&a.stade!=='Perdu';});
+      var nN=actT.filter(function(a){return !a.typeAffaire;}).length;
+      return nN>0?'<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+nN+' affaire(s) sans type défini</div>':'';
+    })()}
+  </div>
 
   <div class="evo-section">
     <div class="sec-title">📅 Évolution mensuelle <span class="sec-sub">M = ${ymLabel(mCur)} · vs ${ymLabel(mPrev)}</span></div>
@@ -2914,6 +2987,12 @@ function openModal(id){
     document.getElementById('f-poste2').value=a.poste2||'';
     document.getElementById('f-tel2').value=a.tel2||'';
     document.getElementById('f-email2').value=a.email2||'';
+    document.getElementById('f-int3').value=a.int3||'';
+    document.getElementById('f-poste3').value=a.poste3||'';
+    document.getElementById('f-tel3').value=a.tel3||'';
+    document.getElementById('f-email3').value=a.email3||'';
+    // Type affaire
+    setTypeAffaire(a.typeAffaire||'');
     // Opp fields
     document.getElementById('f-comm').value=a.commercial||'';
     document.getElementById('f-region-aff').value=a.regionId||'';
@@ -2935,6 +3014,7 @@ function openModal(id){
     document.getElementById('drawer-title').textContent='Nouvelle affaire';
     document.getElementById('drawer-sub').textContent='';
     document.getElementById('edit-id').value='';
+    setTypeAffaire('');
     ['f-client','f-ville','f-adresse','f-int1','f-poste1','f-tel1','f-email1',
      'f-int2','f-poste2','f-tel2','f-email2','f-categorie','f-ca','f-marge',
      'f-date','f-closing','f-comment'].forEach(function(x){document.getElementById(x).value='';});
@@ -3344,6 +3424,9 @@ async function saveAffaire(){
     tel1:document.getElementById('f-tel1').value.trim(), email1:document.getElementById('f-email1').value.trim(),
     int2:document.getElementById('f-int2').value.trim(), poste2:document.getElementById('f-poste2').value.trim(),
     tel2:document.getElementById('f-tel2').value.trim(), email2:document.getElementById('f-email2').value.trim(),
+    int3:document.getElementById('f-int3').value.trim(), poste3:document.getElementById('f-poste3').value.trim(),
+    tel3:document.getElementById('f-tel3').value.trim(), email3:document.getElementById('f-email3').value.trim(),
+    typeAffaire:document.getElementById('f-type-affaire').value,
     commercial:comm, regionId:document.getElementById('f-region-aff').value,
     produit:document.getElementById('f-prod').value, stade:document.getElementById('f-stade').value,
     categorie:document.getElementById('f-categorie').value.trim(),
@@ -3850,6 +3933,6 @@ function copySegmentEmails(i){var emails=savedSegments[i].emails.join(', ');navi
 function exportSegmentCSV(i){var seg=savedSegments[i];var cols=['Nom','Societe','Poste','Email','Telephone','Produit','Stade','Commercial','Region'];var rows=(seg.contacts||[]).map(function(c){return[c.nom,c.societe,c.poste,c.email,c.tel,c.produit,c.stade,c.commercial,c.region].map(function(v){return '"'+((v||'').toString().replace(/"/g,'""'))+'"';}).join(';');});var csv=[cols.join(';')].concat(rows).join('\n');var el=document.createElement('a');el.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);el.download='segment_'+seg.name.replace(/[^a-z0-9]/gi,'_')+'_'+seg.date+'.csv';el.click();}
 function loadSegment(i){copySegmentEmails(i);}
 
-</script><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color:#6b7299;font-size:13px">Connexion Supabase...</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div>
+</script><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color: rgb(255, 107, 107); font-size: 13px;">Erreur connexion Supabase: Cannot read properties of null (reading 'role')</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div><div id="sb-loading" style="position: fixed; inset: 0px; background: rgb(12, 14, 24); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px;"><div style="font-family:DM Serif Display,serif;font-size:28px;color:#4f7cff">SPANCO <span style="color:#00d4a8">CRM</span></div><div id="loading-msg" style="color:#6b7299;font-size:13px">Connexion Supabase...</div><div style="width:40px;height:40px;border:3px solid #252a42;border-top-color:#4f7cff;border-radius:50%;animation:spin .8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div>
 
 </body></html>
