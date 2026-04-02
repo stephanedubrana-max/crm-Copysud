@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0048)file:///Users/laptopNiou/Downloads/index_38.html -->
+<!-- saved from url=(0048)file:///Users/laptopNiou/Downloads/index_39.html -->
 <html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3350,7 +3350,8 @@ function rowToAff(row){
     date: row.date_action||'',
     closing: row.closing||'',
     comment: row.comment||'',
-    updated: row.updated||''
+    updated: row.updated||'',
+    typeAffaire: row.type_affaire||''
   };
 }
 // ── MAP affaire JS → Supabase row ──
@@ -3373,7 +3374,8 @@ function affToRow(obj){
     date_action: obj.date||'',
     closing: obj.closing||'',
     comment: obj.comment||'',
-    updated: obj.updated||new Date().toISOString().slice(0,10)
+    updated: obj.updated||new Date().toISOString().slice(0,10),
+    type_affaire: obj.typeAffaire||''
   };
 }
 
