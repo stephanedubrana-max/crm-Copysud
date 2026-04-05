@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0048)file:///Users/laptopNiou/Downloads/Index_45.html -->
+<!-- saved from url=(0048)file:///Users/laptopNiou/Downloads/Index_49.html -->
 <html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -371,6 +371,7 @@ td{padding:9px 10px;font-size:13px}
     <button class="" onclick="switchView(&#39;kanban&#39;,this)">⬜ Kanban</button>
     <button onclick="switchView(&#39;liste&#39;,this)" class="">☰ Liste</button>
     <button onclick="switchView(&#39;agenda&#39;,this)" class="">📅 Agenda</button>
+    <button onclick="switchView(&#39;pipeline&#39;,this)" id="nav-pipeline" class="">📆 Pipeline Mensuel</button>
     <button onclick="switchView(&#39;dashboard&#39;,this)" id="nav-dash" class="">📊 Dashboard</button>
     <button onclick="switchView(&#39;performance&#39;,this)" id="nav-perf" class="active">🏆 Performance</button>
     <button onclick="switchView(&#39;comms&#39;,this)" id="nav-comms" class="">📧 Communications</button>
@@ -1229,6 +1230,12 @@ td{padding:9px 10px;font-size:13px}
     </div>
 
     <!-- DASHBOARD -->
+    <div id="view-pipeline" class="view">
+      <div style="padding:20px" id="pipeline-content">
+        <div style="color:var(--muted);text-align:center;padding:40px">Chargement...</div>
+      </div>
+    </div>
+
     <div id="view-dashboard" class="view">
       <div class="ds" id="dash-content">
   <div class="dash-grid">
@@ -1448,6 +1455,7 @@ td{padding:9px 10px;font-size:13px}
       <div class="fr" style="margin-bottom:10px">
         <div class="fg"><div class="fl">Mois de closing prévu</div><input class="fi" type="month" id="f-closing"></div>
         <div class="fg"><div class="fl">Date prochaine action</div><input class="fi" type="date" id="f-date"></div>
+        <div class="fg"><div class="fl" style="color:var(--muted)">📅 Date de création <span style="font-size:10px;opacity:.7">(auto)</span></div><input class="fi" type="text" id="f-created-at" readonly="" style="color:var(--muted);cursor:default;background:var(--bg)"></div>
       </div>
       <div class="fg"><div class="fl">Commentaires / prochaine action</div><textarea class="fi" id="f-comment" rows="3" placeholder="Décrire la prochaine étape..." style="resize:vertical;min-height:70px"></textarea></div>
     </div>
@@ -2004,6 +2012,7 @@ function applyFilters(){
   if(currentUser.role!=='commercial'){renderDashboard(d);renderPerformance(d);}
   else{renderCommercialDashboard(d);renderPerformance(d);}
   renderComms(d);
+  renderPipelineMensuel(d);
   updateSidebar(d);
 }
 
@@ -3071,6 +3080,7 @@ function openModal(id){
     document.getElementById('f-date').value=a.date||'';
     document.getElementById('f-closing').value=a.closing||'';
     document.getElementById('f-comment').value=a.comment||'';
+    document.getElementById('f-created-at').value=a.createdAt||'Non renseignée';
     updateTaux();
     // Linked
     tabL.style.display='';
@@ -3084,6 +3094,7 @@ function openModal(id){
     ['f-client','f-ville','f-adresse','f-int1','f-poste1','f-tel1','f-email1',
      'f-int2','f-poste2','f-tel2','f-email2','f-categorie','f-ca','f-marge',
      'f-date','f-closing','f-comment'].forEach(function(x){document.getElementById(x).value='';});
+    var caEl=document.getElementById('f-created-at');if(caEl)caEl.value=new Date().toISOString().slice(0,10)+'';
     document.getElementById('f-stade').value='Suspect';
     document.getElementById('f-proba').value='10';
     document.getElementById('f-taux').value='';
@@ -3444,7 +3455,8 @@ function rowToAff(row){
     closing: row.closing||'',
     comment: row.comment||'',
     updated: row.updated||'',
-    typeAffaire: row.type||''
+    typeAffaire: row.type||'',
+    createdAt: row.created_at||row.updated||''
   };
 }
 // ── MAP affaire JS → Supabase row ──
@@ -3468,7 +3480,8 @@ function affToRow(obj){
     closing: obj.closing||'',
     comment: obj.comment||'',
     updated: obj.updated||new Date().toISOString().slice(0,10),
-    type: obj.typeAffaire||''
+    type: obj.typeAffaire||'',
+    created_at: obj.createdAt||obj.updated||new Date().toISOString().slice(0,10)
   };
 }
 
@@ -3541,12 +3554,20 @@ async function saveAffaire(){
     comment:document.getElementById('f-comment').value.trim(),
     updated:new Date().toISOString().slice(0,10)
   };
+  // createdAt : conservé si modification, auto-renseigné si nouvelle affaire
+  if(id){
+    var existing=affaires.find(function(a){return a.id===parseInt(id);});
+    obj.createdAt=existing?existing.createdAt||obj.updated:obj.updated;
+  } else {
+    obj.createdAt=new Date().toISOString().slice(0,10);
+  }
   obj.interlocuteur = obj.int1;
 
   // Fonction interne : tente la sauvegarde, retire type_affaire si colonne absente
-  async function _doSave(withType){
+  async function _doSave(withType, withCreated){
     var row = affToRow(obj);
     if(!withType) delete row.type;
+    if(!withCreated) delete row.created_at;
     if(id){
       await sbDelete('affaires','id=eq.'+obj.id);
       await sbPost('affaires', row);
@@ -3559,13 +3580,14 @@ async function saveAffaire(){
   }
 
   try {
-    await _doSave(true);
+    await _doSave(true, true);
     closeDrawer(); applyFilters();
   } catch(e){
-    // Si erreur liée à type_affaire (colonne inexistante), on réessaie sans
-    if(e.message && (e.message.includes("'type'") || e.message.includes("'typ"))){
+    var missingType = e.message&&(e.message.includes("'type'") || e.message.includes("'typ"));
+    var missingCreated = e.message&&e.message.includes("created_at");
+    if(missingType || missingCreated){
       try {
-        await _doSave(false);
+        await _doSave(!missingType, !missingCreated);
         closeDrawer(); applyFilters();
       } catch(e2){ alert('Erreur sauvegarde: '+e2.message); }
     } else {
@@ -3899,6 +3921,194 @@ var savedSegments=[];
 try{savedSegments=JSON.parse(localStorage.getItem('sc2_segments')||'[]');}catch(e){savedSegments=[];}
 
 function saveSegments(){localStorage.setItem('sc2_segments',JSON.stringify(savedSegments));}
+
+// ════════════════════════════════════════
+// PIPELINE MENSUEL
+// ════════════════════════════════════════
+function renderPipelineMensuel(data){
+  var pc=document.getElementById('pipeline-content');
+  if(!pc)return;
+
+  var today=new Date();
+  var ym=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0');
+  var ymPrev=today.getMonth()===0
+    ?(today.getFullYear()-1)+'-12'
+    :today.getFullYear()+'-'+String(today.getMonth()).padStart(2,'0');
+
+  function moisLabel(yms){
+    var p=yms.split('-');
+    var mois=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    return mois[parseInt(p[1])-1]+' '+p[0];
+  }
+
+  // Classifier les affaires
+  var actives=data.filter(function(a){return !['Order','Perdu'].includes(a.stade);});
+
+  // Nouvelles ce mois : créées ce mois
+  var nouvelles=actives.filter(function(a){
+    return a.createdAt&&a.createdAt.slice(0,7)===ym;
+  });
+
+  // Reports : créées avant ce mois, toujours actives
+  var reports=actives.filter(function(a){
+    return !a.createdAt||(a.createdAt.slice(0,7)<ym);
+  });
+
+  // Reports critiques : créées le mois dernier
+  var reportsMinus1=reports.filter(function(a){
+    return a.createdAt&&a.createdAt.slice(0,7)===ymPrev;
+  });
+
+  // Reports anciens : créées avant M-1
+  var reportsAnciens=reports.filter(function(a){
+    return !a.createdAt||(a.createdAt.slice(0,7)<ymPrev);
+  });
+
+  // Projections
+  function pondere(list){
+    return list.reduce(function(s,a){
+      return s+(['Suspect','Possible'].includes(a.stade)?0:(a.marge||0))*(a.proba||0)/100;
+    },0);
+  }
+  function totalMarge(list){return list.reduce(function(s,a){return s+(a.marge||0);},0);}
+
+  var projNouvelles=pondere(nouvelles);
+  var projReports=pondere(reports);
+  var projTotal=projNouvelles+projReports;
+
+  function stadeColor(s){
+    var c={Suspect:'var(--suspect)',Possible:'var(--prospect)',Analyse:'var(--analyse)','Négociation':'var(--negociation)',Closing:'var(--closing)'};
+    return c[s]||'var(--muted)';
+  }
+  function badgeStade(s){
+    return '<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:'+stadeColor(s)+'22;color:'+stadeColor(s)+'">'+s+'</span>';
+  }
+  function daysSince(d){
+    if(!d)return null;
+    return Math.floor((new Date()-new Date(d))/(1000*86400));
+  }
+  function ageLabel(d){
+    var n=daysSince(d);
+    if(n===null)return '<span style="color:var(--muted)">—</span>';
+    var col=n>45?'var(--danger)':n>30?'var(--warn)':'var(--success)';
+    return '<span style="color:'+col+';font-weight:600">'+n+'j</span>';
+  }
+
+  function tableAffaires(list, emptyMsg){
+    if(!list.length) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">'+emptyMsg+'</div>';
+    var t='<table style="width:100%;border-collapse:collapse">';
+    t+='<thead><tr>';
+    ['Client','Commercial','Produit','Stade','Marge','Proba','Marge pond.','Créée le','Âge','Closing prévu'].forEach(function(h){
+      t+='<th style="text-align:left;padding:7px 9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--border)">'+h+'</th>';
+    });
+    t+='</tr></thead><tbody>';
+    list.forEach(function(a){
+      var mp=(['Suspect','Possible'].includes(a.stade)?0:(a.marge||0))*(a.proba||0)/100;
+      var isUrgent=daysSince(a.createdAt)>30&&!['Order','Perdu'].includes(a.stade);
+      t+='<tr style="border-bottom:1px solid var(--border);'+(isUrgent?'background:rgba(255,107,107,.04)':'')+'" onclick="openDrawer('+a.id+')" style="cursor:pointer">';
+      t+='<td style="padding:8px 9px;font-weight:600;cursor:pointer" onclick="openDrawer('+a.id+')">'+a.client+(isUrgent?' <span style="color:var(--danger);font-size:10px">⚠️</span>':'')+'</td>';
+      t+='<td style="padding:8px 9px;font-size:12px;color:var(--muted)">'+a.commercial+'</td>';
+      t+='<td style="padding:8px 9px"><span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(79,124,255,.15);color:#a0b4ff">'+a.produit+'</span></td>';
+      t+='<td style="padding:8px 9px">'+badgeStade(a.stade)+'</td>';
+      t+='<td style="padding:8px 9px;font-weight:600">'+fmt(a.marge||0)+'</td>';
+      t+='<td style="padding:8px 9px;color:var(--muted)">'+( a.proba||0)+'%</td>';
+      t+='<td style="padding:8px 9px;font-weight:600;color:var(--accent2)">'+fmt(mp)+'</td>';
+      t+='<td style="padding:8px 9px;font-size:12px;color:var(--muted)">'+(a.createdAt?a.createdAt:'—')+'</td>';
+      t+='<td style="padding:8px 9px">'+ageLabel(a.createdAt)+'</td>';
+      t+='<td style="padding:8px 9px;font-size:12px;color:var(--muted)">'+(a.closing||'—')+'</td>';
+      t+='</tr>';
+    });
+    t+='</tbody></table>';
+    return t;
+  }
+
+  var h='';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">';
+  h+='<div><div style="font-family:DM Serif Display,serif;font-size:22px">📆 Pipeline Mensuel</div>';
+  h+='<div style="font-size:13px;color:var(--muted);margin-top:2px">Cycle de vente 1 mois · '+moisLabel(ym)+'</div></div>';
+  h+='</div>';
+
+  // KPIs synthèse
+  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">';
+  h+='<div class="kpi-card"><div class="kl">🆕 Nouvelles ce mois</div><div class="kv ac">'+nouvelles.length+'</div><div class="ks">Créées en '+moisLabel(ym)+'</div></div>';
+  h+='<div class="kpi-card"><div class="kl">🔄 Reports M-1</div><div class="kv wa">'+reportsMinus1.length+'</div><div class="ks">Créées en '+moisLabel(ymPrev)+'</div></div>';
+  h+='<div class="kpi-card"><div class="kl">⏳ Reports anciens</div><div class="kv" style="color:var(--danger)">'+reportsAnciens.length+'</div><div class="ks">Créées avant '+moisLabel(ymPrev)+'</div></div>';
+  h+='<div class="kpi-card"><div class="kl">📈 Projection marge pond.</div><div class="kv su">'+fmt(projTotal)+'</div><div class="ks">Nouvelles : '+fmt(projNouvelles)+' · Reports : '+fmt(projReports)+'</div></div>';
+  h+='</div>';
+
+  // Section 1 — Nouvelles affaires ce mois
+  h+='<div class="chart-card" style="margin-bottom:16px">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+  h+='<div class="chart-title" style="margin:0">🆕 Affaires entrées ce mois — '+moisLabel(ym)+' <span style="font-size:12px;color:var(--muted);font-weight:400">('+nouvelles.length+' affaires · marge pond. : '+fmt(projNouvelles)+')</span></div>';
+  h+='</div>';
+  h+=tableAffaires(nouvelles,'Aucune nouvelle affaire créée ce mois');
+  h+='</div>';
+
+  // Section 2 — Reports M-1 (critique)
+  if(reportsMinus1.length){
+    h+='<div class="chart-card" style="margin-bottom:16px;border-color:rgba(255,159,67,.3)">';
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
+    h+='<div class="chart-title" style="margin:0;color:var(--warn)">🔄 Reports de '+moisLabel(ymPrev)+' <span style="font-size:12px;color:var(--muted);font-weight:400">('+reportsMinus1.length+' affaires · '+fmt(pondere(reportsMinus1))+' pondérée)</span></div>';
+    h+='</div>';
+    h+='<div style="font-size:12px;color:var(--warn);margin-bottom:10px">⚠️ Ces affaires ont dépassé 1 mois sans être closes — à relancer en priorité.</div>';
+    h+=tableAffaires(reportsMinus1,'');
+    h+='</div>';
+  }
+
+  // Section 3 — Reports anciens (alerte)
+  if(reportsAnciens.length){
+    h+='<div class="chart-card" style="margin-bottom:16px;border-color:rgba(255,107,107,.3)">';
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
+    h+='<div class="chart-title" style="margin:0;color:var(--danger)">⏳ Reports anciens <span style="font-size:12px;color:var(--muted);font-weight:400">('+reportsAnciens.length+' affaires · '+fmt(pondere(reportsAnciens))+' pondérée)</span></div>';
+    h+='</div>';
+    h+='<div style="font-size:12px;color:var(--danger);margin-bottom:10px">🚨 Ces affaires sont dans le pipeline depuis plus de 2 mois — action urgente requise.</div>';
+    h+=tableAffaires(reportsAnciens,'Aucune affaire ancienne');
+    h+='</div>';
+  }
+
+  // Section 4 — Projection graphique simple
+  h+='<div class="chart-card">';
+  h+='<div class="chart-title">📊 Projection du mois — Marge pondérée par catégorie d\'entrée</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px">';
+  // Barres nouvelles vs reports
+  var maxProj=Math.max(projNouvelles,projReports,1);
+  h+='<div>';
+  h+='<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Répartition pipeline actif</div>';
+  var items=[
+    {label:'🆕 Nouvelles ce mois',val:projNouvelles,col:'var(--success)'},
+    {label:'🔄 Reports M-1',val:pondere(reportsMinus1),col:'var(--warn)'},
+    {label:'⏳ Reports anciens',val:pondere(reportsAnciens),col:'var(--danger)'}
+  ];
+  items.forEach(function(it){
+    var w=Math.round(it.val/Math.max(projTotal,1)*100);
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    h+='<div style="width:130px;font-size:12px;color:var(--muted)">'+it.label+'</div>';
+    h+='<div style="flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden">';
+    h+='<div style="width:'+w+'%;height:100%;background:'+it.col+';border-radius:4px;display:flex;align-items:center;padding:0 6px">';
+    h+='<span style="font-size:11px;color:#fff;font-weight:600;white-space:nowrap">'+fmt(it.val)+'</span></div></div></div>';
+  });
+  h+='</div>';
+  // Stats par stade sur les nouvelles
+  h+='<div>';
+  h+='<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Stades des nouvelles affaires</div>';
+  var stageCount={};
+  nouvelles.forEach(function(a){stageCount[a.stade]=(stageCount[a.stade]||0)+1;});
+  if(!Object.keys(stageCount).length){
+    h+='<div style="color:var(--muted);font-size:12px">Aucune nouvelle affaire ce mois</div>';
+  } else {
+    Object.keys(stageCount).forEach(function(s){
+      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+      h+='<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:'+stadeColor(s)+'22;color:'+stadeColor(s)+';min-width:90px;text-align:center">'+s+'</span>';
+      h+='<span style="font-weight:700;color:var(--text)">'+stageCount[s]+'</span>';
+      h+='<span style="color:var(--muted);font-size:11px">affaire'+(stageCount[s]>1?'s':'')+'</span>';
+      h+='</div>';
+    });
+  }
+  h+='</div>';
+  h+='</div></div>';
+
+  pc.innerHTML=h;
+}
 
 function renderComms(data){
   var pc=document.getElementById('comms-content');
