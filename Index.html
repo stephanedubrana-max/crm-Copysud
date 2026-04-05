@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0048)file:///Users/laptopNiou/Downloads/Index_43.html -->
+<!-- saved from url=(0048)file:///Users/laptopNiou/Downloads/Index_45.html -->
 <html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -416,7 +416,7 @@ td{padding:9px 10px;font-size:13px}
       <div class="sidebar-label">Synthèse</div>
       <div class="kpi-mini"><div class="kl">Affaires actives</div><div class="kv ac" id="sb-count">42</div></div>
       <div class="kpi-mini"><div class="kl">Marge pipeline</div><div class="kv" id="sb-marge">437 000 €</div></div>
-      <div class="kpi-mini"><div class="kl">Marge pondérée</div><div class="kv su" id="sb-pondere">301 550 €</div></div>
+      <div class="kpi-mini"><div class="kl">Marge pondérée</div><div class="kv su" id="sb-pondere">290 300 €</div></div>
       <div class="kpi-mini">
         <div class="kl">Objectif mensuel</div>
         <div class="kv wa" id="sb-obj-pct">0%</div>
@@ -2601,44 +2601,102 @@ function renderPerformance(data){
   h+='<div class="kpi-card"><div class="kl">Taux closing '+quarterLabel(qNowP.y,qNowP.q)+'</div><div class="kv wa">'+(qRP.taux!==null?qRP.taux+'%':'&mdash;')+'</div><div class="ks">'+qRP.orders+' gagn&eacute;es / '+qRP.perdus+' perdues</div></div>';
   h+='</div>';
 
-  // Tableau par région
-  h+='<div class="chart-card" style="margin-bottom:14px">';
-  h+='<div class="chart-title">🗺️ Performance par région — '+ymLabel(mCur)+'</div>';
-  h+='<table style="width:100%;border-collapse:collapse"><thead><tr>';
-  var th=['Région','Actives','Pipeline','Marge M','vs M-1','Obj. mensuel','Atteinte M','Cumul 12 mois','Obj. annuel','Atteinte A','Taux'];
-  for(var i=0;i<th.length;i++)h+='<th style="text-align:left;padding:7px 9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:2px solid var(--border)">'+th[i]+'</th>';
-  h+='</tr></thead><tbody>';
-  for(var i2=0;i2<regData.length;i2++){
-    var rd2=regData[i2];
-    h+='<tr style="border-bottom:1px solid var(--border)">';
-    h+='<td style="padding:9px"><span style="width:8px;height:8px;border-radius:50%;background:'+rd2.r.color+';display:inline-block;margin-right:6px"></span><strong>'+rd2.r.name+'</strong></td>';
-    h+='<td style="padding:9px">'+rd2.act+'</td>';
-    h+='<td style="padding:9px;color:var(--accent2)">'+fmtK(rd2.pipe)+'</td>';
-    h+='<td style="padding:9px;font-weight:600;color:var(--success)">'+fmt(rd2.om)+'</td>';
-    h+='<td style="padding:9px">'+dHtml(rd2.om,rd2.op)+'</td>';
-    h+='<td style="padding:9px;color:var(--muted)">'+(rd2.objM?fmt(rd2.objM):'—')+'</td>';
-    h+='<td style="padding:9px;min-width:100px">'+gauge(rd2.pctM)+'</td>';
-    h+='<td style="padding:9px;font-weight:600">'+fmt(rd2.cumul)+'</td>';
-    h+='<td style="padding:9px;color:var(--muted)">'+(rd2.objA?fmt(rd2.objA):'—')+'</td>';
-    h+='<td style="padding:9px;min-width:100px">'+gauge(rd2.pctA)+'</td>';
-    h+='<td style="padding:9px;font-weight:600;color:var(--warn)">'+(rd2.tx!==null?rd2.tx+'%':'—')+'</td>';
-    h+='</tr>';
-  }
-  h+='</tbody></table></div>';
-
-  // Sparklines marge gagnée par région (12 mois)
-  h+='<div style="display:grid;grid-template-columns:repeat('+cfg.regions.length+',1fr);gap:12px;margin-bottom:14px">';
-  for(var si=0;si<cfg.regions.length;si++){
-    var sr=cfg.regions[si];
-    var srd=data.filter(function(a){return a.regionId===sr.id;});
-    var svals=months12.map(function(m){return margeGagneeM(srd,m);});
-    var sobjM=getObjMensuel(sr.id);
-    h+='<div style="background:var(--surface2);border-radius:9px;padding:11px;border:1px solid var(--border)">';
-    h+='<div style="font-size:11px;font-weight:600;color:'+sr.color+';margin-bottom:7px">📍 '+sr.name+' — Marge gagnée / mois (12 mois)</div>';
-    h+=sparkSVGwithTarget(svals,months12,sr.color,sobjM);
+  // Tableau par région OU bloc individuel selon le filtre
+  var fcPerfCheck=(document.getElementById('f-commercial')||{}).value||'';
+  if(fcPerfCheck){
+    // ── Vue commerciale individuelle ──
+    var uPerf=cfg.users.find(function(u){return u.name===fcPerfCheck;});
+    var rPerf=uPerf?regionById(uPerf.regionId):null;
+    var objAnnPerf=uPerf?(cfg.objectifs[uPerf.id]||cfg.objectifs['name_'+uPerf.name]||0):0;
+    var objMPerf=objAnnPerf?Math.round(objAnnPerf/12):0;
+    var margeM=margeGagneeM(data,mCur);
+    var margeP=margeGagneeM(data,mPrev);
+    var cumul12=months12.reduce(function(s,m){return s+margeGagneeM(data,m);},0);
+    var pctM=objMPerf?Math.min(100,Math.round(margeM/objMPerf*100)):null;
+    var pctA=objAnnPerf?Math.min(100,Math.round(cumul12/objAnnPerf*100)):null;
+    var actives=data.filter(function(a){return !['Order','Perdu'].includes(a.stade);}).length;
+    var pipeline=data.filter(function(a){return !['Order','Perdu'].includes(a.stade);}).reduce(function(s,a){return s+(['Suspect','Possible'].includes(a.stade)?0:(a.marge||0))*(a.proba||0)/100;},0);
+    var qPerfP=tauxClosingQuarter(data,quarterOfNow().y,quarterOfNow().q);
+    h+='<div class="chart-card" style="margin-bottom:14px">';
+    h+='<div class="chart-title">👤 Performance individuelle — '+fcPerfCheck+(rPerf?' <span style="font-size:11px;color:var(--muted)">· '+rPerf.name+'</span>':'')+'</div>';
+    h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px">';
+    h+='<div style="background:var(--surface2);border-radius:9px;padding:12px;border:1px solid var(--border)">';
+    h+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Affaires actives</div>';
+    h+='<div style="font-size:22px;font-weight:700;color:var(--accent)">'+actives+'</div>';
+    h+='<div style="font-size:11px;color:var(--muted);margin-top:2px">Pipeline : '+fmtK(pipeline)+'</div>';
     h+='</div>';
+    h+='<div style="background:var(--surface2);border-radius:9px;padding:12px;border:1px solid var(--border)">';
+    h+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Marge gagnée ce mois</div>';
+    h+='<div style="font-size:22px;font-weight:700;color:var(--success)">'+fmt(margeM)+'</div>';
+    h+=(objMPerf?'<div style="font-size:11px;color:var(--muted);margin-top:2px">Obj. M : '+fmt(objMPerf)+' · '+gauge(pctM)+'</div>':'<div style="font-size:11px;color:var(--muted);margin-top:2px">Objectif non défini</div>');
+    h+='</div>';
+    h+='<div style="background:var(--surface2);border-radius:9px;padding:12px;border:1px solid var(--border)">';
+    h+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Cumul 12 mois</div>';
+    h+='<div style="font-size:22px;font-weight:700;color:var(--accent)">'+fmt(cumul12)+'</div>';
+    h+=(objAnnPerf?'<div style="font-size:11px;color:var(--muted);margin-top:2px">Obj. A : '+fmt(objAnnPerf)+' · '+gauge(pctA)+'</div>':'<div style="font-size:11px;color:var(--muted);margin-top:2px">Objectif non défini</div>');
+    h+='</div>';
+    h+='<div style="background:var(--surface2);border-radius:9px;padding:12px;border:1px solid var(--border)">';
+    h+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Taux closing '+quarterLabel(quarterOfNow().y,quarterOfNow().q)+'</div>';
+    h+='<div style="font-size:22px;font-weight:700;color:var(--warn)">'+(qPerfP.taux!==null?qPerfP.taux+'%':'—')+'</div>';
+    h+='<div style="font-size:11px;color:var(--muted);margin-top:2px">'+qPerfP.orders+' gagnées / '+qPerfP.perdus+' perdues</div>';
+    h+='</div>';
+    h+='</div></div>';
+  } else {
+    // ── Vue globale ou région : tableau par région ──
+    h+='<div class="chart-card" style="margin-bottom:14px">';
+    h+='<div class="chart-title">🗺️ Performance par région — '+ymLabel(mCur)+'</div>';
+    h+='<table style="width:100%;border-collapse:collapse"><thead><tr>';
+    var th=['Région','Actives','Pipeline','Marge M','vs M-1','Obj. mensuel','Atteinte M','Cumul 12 mois','Obj. annuel','Atteinte A','Taux'];
+    for(var i=0;i<th.length;i++)h+='<th style="text-align:left;padding:7px 9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:2px solid var(--border)">'+th[i]+'</th>';
+    h+='</tr></thead><tbody>';
+    for(var i2=0;i2<regData.length;i2++){
+      var rd2=regData[i2];
+      h+='<tr style="border-bottom:1px solid var(--border)">';
+      h+='<td style="padding:9px"><span style="width:8px;height:8px;border-radius:50%;background:'+rd2.r.color+';display:inline-block;margin-right:6px"></span><strong>'+rd2.r.name+'</strong></td>';
+      h+='<td style="padding:9px">'+rd2.act+'</td>';
+      h+='<td style="padding:9px;color:var(--accent2)">'+fmtK(rd2.pipe)+'</td>';
+      h+='<td style="padding:9px;font-weight:600;color:var(--success)">'+fmt(rd2.om)+'</td>';
+      h+='<td style="padding:9px">'+dHtml(rd2.om,rd2.op)+'</td>';
+      h+='<td style="padding:9px;color:var(--muted)">'+(rd2.objM?fmt(rd2.objM):'—')+'</td>';
+      h+='<td style="padding:9px;min-width:100px">'+gauge(rd2.pctM)+'</td>';
+      h+='<td style="padding:9px;font-weight:600">'+fmt(rd2.cumul)+'</td>';
+      h+='<td style="padding:9px;color:var(--muted)">'+(rd2.objA?fmt(rd2.objA):'—')+'</td>';
+      h+='<td style="padding:9px;min-width:100px">'+gauge(rd2.pctA)+'</td>';
+      h+='<td style="padding:9px;font-weight:600;color:var(--warn)">'+(rd2.tx!==null?rd2.tx+'%':'—')+'</td>';
+      h+='</tr>';
+    }
+    h+='</tbody></table></div>';
   }
-  h+='</div>';
+
+  // Sparklines marge gagnée — adaptées au filtre
+  var fcPerfSpark=(document.getElementById('f-commercial')||{}).value||'';
+  if(!fcPerfSpark){
+    // Vue globale/région : sparklines par région
+    h+='<div style="display:grid;grid-template-columns:repeat('+cfg.regions.length+',1fr);gap:12px;margin-bottom:14px">';
+    for(var si=0;si<cfg.regions.length;si++){
+      var sr=cfg.regions[si];
+      var srd=data.filter(function(a){return a.regionId===sr.id;});
+      var svals=months12.map(function(m){return margeGagneeM(srd,m);});
+      var sobjM=getObjMensuel(sr.id);
+      h+='<div style="background:var(--surface2);border-radius:9px;padding:11px;border:1px solid var(--border)">';
+      h+='<div style="font-size:11px;font-weight:600;color:'+sr.color+';margin-bottom:7px">📍 '+sr.name+' — Marge gagnée / mois (12 mois)</div>';
+      h+=sparkSVGwithTarget(svals,months12,sr.color,sobjM);
+      h+='</div>';
+    }
+    h+='</div>';
+  } else {
+    // Vue commercial : sparkline individuelle
+    var uSpark=cfg.users.find(function(u){return u.name===fcPerfSpark;});
+    var uColor=uSpark?regionById(uSpark.regionId).color:'#4f7cff';
+    var uObjAnn=uSpark?(cfg.objectifs[uSpark.id]||cfg.objectifs['name_'+uSpark.name]||0):0;
+    var uObjM=uObjAnn?Math.round(uObjAnn/12):0;
+    var uVals=months12.map(function(m){return margeGagneeM(data,m);});
+    h+='<div style="margin-bottom:14px">';
+    h+='<div style="background:var(--surface2);border-radius:9px;padding:11px;border:1px solid var(--border)">';
+    h+='<div style="font-size:11px;font-weight:600;color:'+uColor+';margin-bottom:7px">👤 '+fcPerfSpark+' — Marge gagnée / mois (12 mois)</div>';
+    h+=sparkSVGwithTarget(uVals,months12,uColor,uObjM);
+    h+='</div></div>';
+  }
 
   // Classement
   h+='<div class="chart-card" style="margin-bottom:14px">';
