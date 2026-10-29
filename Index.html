@@ -3,7 +3,7 @@
 <html lang="fr"><head><meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>CopySud — CRM SPANCO</title>
-<meta name="copysud-build" content="09-objectifs-coherents-20261029"/>
+<meta name="copysud-build" content="10-apercu-forecast-perimetres-20261029"/>
 <style>
 :root{
   --bg:#0c0e18;--surface:#13162a;--surface2:#191d31;--border:#252a42;
@@ -339,6 +339,11 @@ td{padding:9px 10px;font-size:13px}
 .fc-badge-antici{background:rgba(38,222,129,.18);color:var(--success)}
 .fc-badge-active{background:rgba(79,124,255,.18);color:var(--accent)}
 .ci-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:5px;vertical-align:middle}
+
+#drawer-main .fl{width:auto;min-width:0;flex:none;line-height:1.4}#panel-opp>.fr3:has(>.fg:only-child){grid-template-columns:1fr}
+#crm-main-cumulative svg{display:block;width:100%;max-width:900px;height:auto;margin:12px auto 8px}#crm-main-cumulative svg polyline[stroke-dasharray]{stroke:var(--muted)}
+.crm-preview-note{padding:6px 20px;background:#202c46;color:#c6d9ff;font-size:11px;text-align:center}
+.crm-page-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:22px;flex-wrap:wrap}.crm-page-head h2{font-size:26px;margin:4px 0 8px}.crm-page-head p,.crm-soft-label{color:var(--muted);font-size:12px}.crm-eyebrow{color:var(--accent2);font-size:10px;letter-spacing:1.6px;font-weight:700}.crm-action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}.crm-action-card{font:inherit;text-align:left;cursor:pointer;border:1px solid var(--border);display:flex;flex-direction:column;gap:8px}.crm-action-card:hover{border-color:var(--accent);background:var(--surface2)}.crm-action-card .kv{font-size:36px}.crm-action-link{font-size:11px;color:var(--accent);margin-top:5px}.crm-alert-chip{display:inline-block;font-size:10px;margin:2px 4px 2px 0;padding:4px 6px;background:var(--surface2);border-radius:5px}.crm-table-scroll{overflow:auto}.crm-priority-table td{padding:12px 8px;font-size:12px}.crm-empty{padding:25px;color:var(--muted);font-size:13px}.crm-fold{border:1px solid var(--border);border-radius:10px;margin:16px 0;overflow:hidden}.crm-fold>summary{cursor:pointer;padding:14px 16px;font-size:12px;color:var(--accent);background:var(--surface)}.crm-fold>div{padding:14px}.crm-sidebar-fold>summary{padding:10px;font-size:11px}.crm-sidebar-fold>.fg{padding:0 10px 10px;margin:0}.crm-perf-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}.crm-perf-grid .kv{font-size:26px}.crm-priority-banner{padding:10px 14px;border:1px solid var(--accent);border-radius:8px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;color:var(--accent);font-size:12px}select:disabled{opacity:.75;cursor:default}@media(max-width:1100px){.crm-perf-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:750px){.crm-action-grid,.crm-perf-grid{grid-template-columns:1fr}}
 </style>
 <style>
 :root{--bg:#0d1220;--surface:#151d30;--surface2:#1b263c;--border:#2c3953;--muted:#a0aec6;--accent:#7597ff;--accent2:#4de0c0;--text:#edf2ff}
@@ -1483,10 +1488,14 @@ function renderPerformanceBase(data){
 
   var filteredComm=(document.getElementById('f-commercial')||{value:''}).value||'';
   var filteredRegion=(document.getElementById('f-region')||{value:''}).value||'';
+  comList=comList.filter(x=>(!filteredComm||x.c===filteredComm)&&(!filteredRegion||x.r.id===filteredRegion));
   // ── REGION DATA ──
   var regData=[];
   for(var ri2=0;ri2<cfg.regions.length;ri2++){
     var r=cfg.regions[ri2];
+    if(currentUser.role==='n1'&&r.id!==currentUser.regionId)continue;
+    if(filteredRegion&&r.id!==filteredRegion)continue;
+    if(filteredComm&&commRegion(filteredComm)!==r.id)continue;
     var rd=data.filter(function(a){return a.regionId===r.id;});
     var rAct=rd.filter(function(a){return !['Order','Perdu','En veille','Suspect','Possible'].includes(a.stade);});
     var rPipe=rAct.reduce(function(s,a){return s+(a.marge||0);},0);
@@ -2905,8 +2914,8 @@ function renderForecast(data){
  h+='<div style="font-size:12px;line-height:1.6;color:var(--muted);margin:0 0 18px">Les reports sont compris dans « Restant à signer » : ils ne s’ajoutent pas une seconde fois au total. Une affaire change de mois uniquement après modification de sa signature prévue.</div>';
  if(f.toReplan.length){h+='<div class="chart-card" id="fc-replan" style="border-color:var(--warn);margin-bottom:18px"><div class="forecast-section-title" style="margin-top:0;color:var(--warn)">⚠️ '+f.toReplan.length+' affaire(s) à replanifier · '+fmt(f.overdueMargin)+'</div><p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px">Signature prévue dépassée ou non renseignée. Ces montants sont exclus du total de '+ymLabel(selected)+'. Ouvrez la fiche et confirmez le nouveau mois de signature prévu. Aucun report automatique.</p>'+_fctable(f.toReplan,'overdue')+'</div>';}
  if(selected<asOf)h+='<div class="chart-card" style="font-size:12px;line-height:1.6;margin-bottom:16px;color:var(--muted)">Vous consultez un mois passé. Les affaires encore prévues sur ce mois sont des prévisions non actualisées, pas nécessairement la prévision connue à l’époque. Choisissez une photographie mensuelle pour retrouver un état figé.</div>';
- h+='<div class="chart-card" style="margin-bottom:18px"><div class="chart-title">Vue 6 mois · '+(window.crmAsOf?'état de la photographie':'état actuel des affaires')+'</div><p style="font-size:11px;color:var(--muted);margin:6px 0 14px">Vert : signé · Bleu : à signer · Orange : prévision dépassée non replanifiée. Le graphique courant ne reconstitue pas les prévisions historiques.</p>';
- for(const x of series){const stale=x.month<asOf;h+='<div style="display:grid;grid-template-columns:65px minmax(80px,1fr) 110px;gap:10px;align-items:center;margin:14px 0;font-size:12px"><span>'+ymLabel(x.month)+'</span><div style="height:24px;display:flex;background:var(--surface2);border-radius:5px;overflow:hidden" aria-label="'+crmEscape(ymLabel(x.month)+' : '+fmt(x.signedMargin)+' signés, '+fmt(x.pendingMargin)+' restant sur ce mois')+'"><span style="width:'+x.signedMargin/max*100+'%;background:var(--success)"></span><span style="width:'+x.pendingMargin/max*100+'%;background:'+(stale?'var(--warn)':'var(--accent)')+'"></span></div><strong style="text-align:right">'+fmt(x.total)+'</strong></div>';}
+ h+='<div class="chart-card" style="margin-bottom:18px"><div class="chart-title">Vue 6 mois · '+(window.crmAsOf?'état de la photographie':'état actuel des affaires')+' · '+ymLabel(months[0])+' → '+ymLabel(months[5])+'</div><p style="font-size:11px;color:var(--muted);margin:6px 0 14px">Vert : signé · Bleu : à signer · Orange : prévision dépassée non replanifiée. Le graphique courant ne reconstitue pas les prévisions historiques.</p>';
+ for(const x of series){const stale=x.month<asOf;h+='<div data-forecast-month="'+x.month+'" data-signed="'+x.signedMargin+'" data-pending="'+x.pendingMargin+'" style="display:grid;grid-template-columns:70px minmax(80px,1fr) 145px;gap:10px;align-items:center;margin:14px 0;font-size:12px;padding:10px 8px;border-radius:7px;'+(x.month===selected?'background:var(--surface2);outline:1px solid var(--accent)':'')+'"><span>'+ymLabel(x.month)+(x.month===selected?'<div class="ks">Mois choisi</div>':'')+'</span><div style="height:24px;display:flex;background:var(--surface2);border-radius:5px;overflow:hidden" aria-label="'+crmEscape(ymLabel(x.month)+' : '+fmt(x.signedMargin)+' signés, '+fmt(x.pendingMargin)+' restant sur ce mois')+'"><span style="width:'+x.signedMargin/max*100+'%;background:var(--success)"></span><span style="width:'+x.pendingMargin/max*100+'%;background:'+(stale?'var(--warn)':'var(--accent)')+'"></span></div><div style="text-align:right"><strong>'+fmt(x.total)+'</strong><div style="font-size:10px;color:var(--success);margin-top:4px">Signé : '+fmt(x.signedMargin)+'</div><div style="font-size:10px;color:'+(stale?'var(--warn)':'var(--accent)')+';margin-top:3px">À signer : '+fmt(x.pendingMargin)+'</div></div></div>';}
  h+='</div>';
  const section=(title,rows,kind)=>rows.length?'<div class="chart-card" style="margin-bottom:16px"><div class="forecast-section-title" style="margin-top:0">'+title+' · '+rows.length+' affaire(s)</div>'+_fctable(rows,kind)+'</div>':'';
  h+=section('✅ Déjà signé en '+ymLabel(selected),f.signed,'signed');
@@ -3304,4 +3313,87 @@ function clearCrmFilters(){
  for(const id of ['f-region','f-commercial','f-produit','f-stade-filter','f-date-filter','f-type-filter','search-input']){const el=document.getElementById(id);if(el)el.value='';}
  window._filterRetard=false;window._filterDormant=false;populateSelects();applyFilters();
 }
+</script><script>
+// Proposition ergonomique : mêmes données et mêmes règles d'accès.
+const crmLegacyDashboard=renderDashboard,crmLegacyCommercialDashboard=renderCommercialDashboard,crmLegacyPerformance=renderPerformance;
+const crmLegacyGetFiltered=getFiltered,crmLegacyClearFilters=clearCrmFilters,crmLegacyShowCRM=showCRM;
+let crmPriorityMode='';
+function crmPriorityBuckets(data){
+ const today=crmNow().toISOString().slice(0,10),end=new Date(today+'T12:00:00Z');end.setUTCDate(end.getUTCDate()+7);
+ const until=end.toISOString().slice(0,10),active=data.filter(a=>!['Order','Perdu','En veille'].includes(a.stade));
+ return {late:active.filter(a=>a.date&&a.date<today),soon:active.filter(a=>a.date&&a.date>=today&&a.date<=until),replan:forecastNumbers(data,ym(0)).toReplan};
+}
+getFiltered=function(){const data=crmLegacyGetFiltered();return crmPriorityMode&&document.querySelector('.view.active')?.id==='view-liste'?(crmPriorityBuckets(data)[crmPriorityMode]||data):data;};
+clearCrmFilters=function(){crmPriorityMode='';document.getElementById('crm-priority-banner')?.remove();crmLegacyClearFilters();};
+showCRM=function(){crmPriorityMode='';document.getElementById('crm-priority-banner')?.remove();crmLegacyShowCRM();};
+const crmPriorityLabels={late:'Actions en retard',soon:'Actions dans les sept jours',replan:'Signatures à replanifier'};
+function crmOpenPriority(mode){
+ crmPriorityMode=mode;switchView('liste',document.querySelector('button[onclick="switchView(\'liste\',this)"]'));
+ document.getElementById('crm-priority-banner')?.remove();const el=document.createElement('div');el.id='crm-priority-banner';el.className='crm-priority-banner';
+ el.innerHTML='<span>'+crmEscape(crmPriorityLabels[mode])+'</span><button class="btn btn-ghost btn-sm" onclick="clearCrmFilters()">Effacer les filtres</button>';document.getElementById('view-liste').prepend(el);
+}
+function crmActionDashboard(data){
+ const dc=document.getElementById('dash-content'),opened=document.getElementById('crm-portfolio-analysis')?.open||false;
+ // Conserver les analyses existantes, y compris les sélecteurs et graphiques.
+ (currentUser.role==='commercial'?crmLegacyCommercialDashboard:crmLegacyDashboard)(data);
+ const legacy=document.createElement('div');while(dc.firstChild)legacy.append(dc.firstChild);
+ const b=crmPriorityBuckets(data),active=new Map();for(const list of Object.values(b))for(const a of list)active.set(a.id,a);
+ const rows=[...active.values()].sort((a,c)=>{const al=b.late.some(x=>x.id===a.id),cl=b.late.some(x=>x.id===c.id);return Number(cl)-Number(al)||(a.date||'9999').localeCompare(c.date||'9999');});
+ const cards=[['late','Actions en retard','Échéances dépassées','var(--danger)'],['soon','Dans les 7 jours','Aujourd’hui et prochains jours','var(--accent)'],['replan','Signatures à replanifier','Prévisions dépassées ou manquantes','var(--warn)']];
+ dc.innerHTML='<div class="crm-page-head"><div><div class="crm-eyebrow">MON ACTIVITÉ</div><h2>Sur quoi agir ?</h2><p>Les priorités du portefeuille sélectionné · '+crmEscape(crmNow().toLocaleDateString('fr-FR'))+'</p></div><span class="crm-soft-label">Une affaire peut avoir plusieurs alertes</span></div><div class="crm-action-grid">'+cards.map(([key,label,sub,color])=>'<button class="kpi-card crm-action-card" data-priority="'+key+'" onclick="crmOpenPriority(\''+key+'\')"><span class="kl">'+label+'</span><strong class="kv" style="color:'+color+'">'+b[key].length+'</strong><span class="ks">'+sub+'</span><span class="crm-action-link">Voir les affaires →</span></button>').join('')+'</div><div class="chart-card crm-priority-table"><div class="chart-title">À traiter en priorité <span class="crm-soft-label">'+rows.length+' affaire(s) distincte(s)</span></div>'+(rows.length?'<div class="crm-table-scroll"><table><thead><tr><th>Client / produit</th><th>Prochaine action</th><th>Échéance</th>'+(currentUser.role==='commercial'?'':'<th>Commercial</th>')+'<th>À suivre</th></tr></thead><tbody>'+rows.slice(0,8).map(a=>'<tr onclick="openModal('+a.id+')"><td><strong>'+crmEscape(a.client)+'</strong><div class="ks">'+crmEscape(a.produit)+'</div></td><td>'+crmEscape(a.nextAction||'À préciser')+'</td><td>'+crmEscape(a.date||'—')+'</td>'+(currentUser.role==='commercial'?'':'<td>'+crmEscape(a.commercial)+'</td>')+'<td>'+cards.filter(([k])=>b[k].some(x=>x.id===a.id)).map(([k,label,,color])=>'<span class="crm-alert-chip" style="color:'+color+'">'+label+'</span>').join(' ')+'</td></tr>').join('')+'</tbody></table></div>'+(rows.length>8?'<p class="ks" style="margin-top:12px">Les 8 premières affaires sont affichées. Les compteurs donnent accès à chaque liste complète.</p>':''):'<div class="crm-empty">Aucune priorité identifiée pour ce périmètre.</div>')+'</div>';
+ const details=document.createElement('details');details.id='crm-portfolio-analysis';details.className='crm-fold';details.open=opened;details.innerHTML='<summary>Voir l’analyse du portefeuille</summary>';details.append(legacy);dc.append(details);
+}
+renderDashboard=crmActionDashboard;renderCommercialDashboard=crmActionDashboard;
+function crmAnnualTarget(){
+ const c=document.getElementById('f-commercial').value,r=document.getElementById('f-region').value;
+ if(currentUser.role==='commercial')return getUserObjAnnuel(currentUser);
+ if(c)return getUserObjAnnuel(cfg.users.find(u=>u.name===c));
+ if(r)return getObjRegion(r);return currentUser.role==='n1'?getObjRegion(currentUser.regionId):getObjDirection();
+}
+renderPerformance=function(data){
+ const opened=document.getElementById('crm-performance-details')?.open||false,month=document.getElementById('perf-mois-sel')?.value||ym(0);
+ crmLegacyPerformance(data);const pc=document.getElementById('perf-content'),quarter=document.getElementById('quarter-performance');
+ const selector=document.getElementById('perf-mois-sel');
+ // Inclure l'année de mise en service 2027 et conserver le mois choisi.
+ if(selector){const [year]=month.split('-');selector.replaceChildren();for(let y=Math.min(2026,Number(year));y<=Math.max(2027,Number(year));y++)for(let m=1;m<=12;m++){const key=y+'-'+String(m).padStart(2,'0');selector.add(new Option(ymLabel(key),key));}selector.value=month;}
+ const body=document.createElement('div');for(const n of [...pc.childNodes])if(n!==quarter)body.append(n);
+ const header=selector?.parentElement;
+ const annual=crmAnnualTarget(),monthly=annual/12,year=month.slice(0,4),prev=new Date(Number(year),Number(month.slice(5))-2,1),previous=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0');
+ const sum=rs=>rs.reduce((s,a)=>s+Number(a.marge||0),0),signed=data.filter(a=>a.stade==='Order'&&crmMonth(a)===month),margin=sum(signed),prior=sum(data.filter(a=>a.stade==='Order'&&crmMonth(a)===previous)),cumul=sum(data.filter(a=>a.stade==='Order'&&crmMonth(a).startsWith(year+'-')&&crmMonth(a)<=month)),pct=monthly?margin/monthly*100:null;
+ const diff=margin-prior,delta=(diff>0?'+':'')+fmt(diff)+' vs '+ymLabel(previous);
+ const cards=document.createElement('div');cards.id='crm-performance-kpis';cards.className='crm-perf-grid';
+ const card=(key,label,value,sub,color,extra='')=>'<div class="kpi-card" data-metric="'+key+'"><div class="kl">'+label+'</div><div class="kv" style="color:'+color+'">'+value+'</div><div class="ks">'+sub+'</div>'+extra+'</div>';
+ const bar=p=>'<div class="obj-gauge" style="margin-top:12px"><div class="obj-fill" style="width:'+Math.max(0,Math.min(100,p||0))+'%;background:var(--success)"></div></div>';
+ cards.innerHTML=card('signed-margin','Marge signée du mois',fmt(margin),crmEscape(delta),'var(--success)')+card('attainment','Atteinte de l’objectif mensuel',pct===null?'—':Math.round(pct)+' %','Objectif : '+fmt(monthly),'var(--text)',bar(pct))+card('annual-margin','Marge signée depuis janvier',fmt(cumul),'Objectif annuel : '+fmt(annual),'var(--success)',bar(annual?cumul/annual*100:0))+card('signed-count','Affaires signées du mois',signed.length,crmEscape(ymLabel(month)),'var(--text)');
+ const monthlyTitle=[...body.querySelectorAll('.chart-title')].find(n=>n.textContent.includes('Détail mensuel'));
+ const monthlyCard=monthlyTitle?.closest('.chart-card');
+ if(monthlyCard){monthlyCard.id='crm-monthly-detail';if(currentUser.role==='commercial'){
+  monthlyCard.innerHTML='<div class="chart-title">Mon détail mensuel — '+crmEscape(ymLabel(month))+'</div><div style="overflow:auto"><table><thead><tr><th>Commercial</th><th>Marge signée</th><th>Objectif mensuel</th><th>Atteinte</th><th>Cumul depuis janvier</th></tr></thead><tbody><tr><td>'+crmEscape(currentUser.name)+'</td><td>'+fmt(margin)+'</td><td>'+fmt(monthly)+'</td><td>'+(pct===null?'—':Math.round(pct)+' %')+'</td><td>'+fmt(cumul)+'</td></tr></tbody></table></div>';
+ }}
+ const oldGrid=body.querySelector('.dash-grid');let rates=null;
+ if(oldGrid){rates=document.createElement('div');rates.className='dash-grid';for(const n of [...oldGrid.children])if(/Pipeline|Taux/.test(n.innerText))rates.append(n);oldGrid.remove();}
+ const graphTitle=[...body.querySelectorAll('.chart-title')].find(n=>/cumulée réalisée vs objectif|Cumulé réalisé vs objectif/.test(n.textContent));
+ const oldGraph=graphTitle?.closest('.chart-card');const graph=document.createElement('div');graph.id='crm-main-cumulative';graph.className='chart-card';const months=Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0'));graph.innerHTML='<div class="chart-title">Marge signée cumulée face à l’objectif — '+year+'</div>'+cumulSVG(months.map(m=>sum(data.filter(a=>a.stade==='Order'&&crmMonth(a)===m))),months,'#26de81',monthly,Number(month.slice(5))-1);if(oldGraph)oldGraph.remove();
+ const detail=document.createElement('details');detail.id='crm-performance-details';detail.className='crm-fold';detail.open=opened;detail.innerHTML='<summary>Voir le détail et les indicateurs complémentaires</summary>';
+ if(header)header.remove();if(graph)graph.remove();if(quarter)quarter.remove();
+ const residual=document.createElement('div');if(rates?.children.length)residual.append(rates);while(body.firstChild)residual.append(body.firstChild);detail.append(residual);
+ pc.replaceChildren();const layout=document.createElement('div');layout.style.padding='18px';if(header)layout.append(header);layout.append(cards);if(graph){graph.style.marginBottom='16px';layout.append(graph);}if(quarter){quarter.style.margin='16px 0';layout.append(quarter);}layout.append(detail);pc.append(layout);
+};
+function crmSetupSimplifiedUI(){
+ const history=document.querySelector('#history-bar label:not([hidden])');if(history)history.firstChild.textContent='Comparer le portefeuille avec : ';
+ const filter=document.getElementById('f-date-filter')?.closest('.fg');if(filter){const fold=document.createElement('details');fold.className='crm-fold crm-sidebar-fold';fold.innerHTML='<summary>Plus de filtres</summary>';filter.before(fold);fold.append(filter);document.getElementById('f-date-filter').addEventListener('change',()=>{fold.open=!!document.getElementById('f-date-filter').value;});}
+ const opp=document.getElementById('panel-opp'),head=opp.querySelector('.fsec'),client=document.getElementById('f-client').closest('.fg'),prod=document.getElementById('f-prod').closest('.fg');
+ const identification=document.createElement('div');identification.className='fr';identification.style.marginBottom='14px';identification.append(client,prod);head.after(identification);
+ prod.querySelector('.fl').textContent='Produit';
+ const stage=document.getElementById('f-stade').closest('.fr'),pipeline=stage.previousElementSibling,valuation=[...opp.querySelectorAll('.fsec')].find(e=>e.textContent.includes('Valorisation'));
+ valuation.before(pipeline,stage);pipeline.textContent='Avancement de l’affaire';
+ document.getElementById('f-region-aff').disabled=true;document.getElementById('f-region-aff').title='Région liée au commercial';
+ const note=document.createElement('div');note.className='crm-preview-note';note.textContent='Version d’essai ergonomique · les modifications enregistrées sont réelles';document.getElementById('app').prepend(note);
+ const badge=document.getElementById('f-categorie');if(badge?.parentElement?.classList.contains('fr')&&!badge.parentElement.querySelector('.fg'))badge.parentElement.style.display='none';
+}
+document.getElementById('sb-obj-pct').parentElement.querySelector('.kl').textContent='Atteinte du mois courant';
+crmSetupSimplifiedUI();
+const crmSimplifiedOpenModal=openModal;
+openModal=function(id){crmSimplifiedOpenModal(id);document.getElementById('f-region-aff').disabled=true;};
+
 </script></body></html>
