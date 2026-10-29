@@ -3,7 +3,7 @@
 <html lang="fr"><head><meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>CopySud — CRM SPANCO</title>
-<meta name="copysud-build" content="09-fluidite-sans-categories-20261029"/>
+<meta name="copysud-build" content="09-objectifs-coherents-20261029"/>
 <style>
 :root{
   --bg:#0c0e18;--surface:#13162a;--surface2:#191d31;--border:#252a42;
@@ -1466,7 +1466,7 @@ function renderPerformanceBase(data){
     return '<div style="display:flex;align-items:center;gap:6px">'+bar+'<span style="font-size:11px;font-weight:700;color:'+col+'">'+(showPct!==false?pct+'%':'')+'</span></div>';
   }
   // Objectif mensuel = objectif annuel / 12
-  function getObjAnnuel(key){ return cfg.objectifs[key]||0; }
+  function getObjAnnuel(key){ return key==='all'?getObjDirection():cfg.regions.some(r=>r.id===key)?getObjRegion(key):(cfg.objectifs[key]||0); }
   function getObjMensuel(key){ var a=getObjAnnuel(key); return a?Math.round(a/12):0; }
 
   // ── COMMERCIAL LIST ──
@@ -1695,7 +1695,7 @@ function renderPerformanceBase(data){
     gObjAnn2=uFiltered?(cfg.objectifs[uFiltered.id]||cfg.objectifs['name_'+crmEscape(uFiltered.name)]||0):0;
   } else if(frPerf){
     // Filtre région actif → objectif de la région
-    gObjAnn2=cfg.objectifs[frPerf]||0;
+    gObjAnn2=getObjRegion(frPerf);
   } else if(currentUser.role==='n1'){
     gObjAnn2=getObjRegion(currentUser.regionId);
   } else {
