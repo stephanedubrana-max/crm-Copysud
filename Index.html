@@ -3,6 +3,7 @@
 <html lang="fr"><head><meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>CopySud — CRM SPANCO</title>
+<meta name="copysud-build" content="09-fluidite-sans-categories-20261029"/>
 <style>
 :root{
   --bg:#0c0e18;--surface:#13162a;--surface2:#191d31;--border:#252a42;
@@ -464,7 +465,7 @@ body{font-family:system-ui,-apple-system,sans-serif}header{height:66px;backgroun
 <!-- LISTE -->
 <div class="view" id="view-liste">
 <div class="toolbar">
-<div class="sw"><input class="sb" id="search-input" oninput="applyFilters()" placeholder="Rechercher client, produit, catégorie…" value=""/></div>
+<div class="sw"><input class="sb" id="search-input" oninput="applyFilters()" placeholder="Rechercher client, commercial, produit…" value=""/></div>
 <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
 </div>
 <table>
@@ -542,7 +543,7 @@ body{font-family:system-ui,-apple-system,sans-serif}header{height:66px;backgroun
 </div>
 <div class="fr" style="margin-bottom:10px">
 <div class="fg"><div class="fl">Produit / Segment</div><select class="fi" id="f-prod"></select></div>
-<div class="fg"><div class="fl">Catégorie (libre)</div><input class="fi" id="f-categorie" placeholder="Stratégique, Récurrent..." type="text" value=""/></div>
+<input id="f-categorie" type="hidden" value=""/>
 </div>
 <div class="fr" style="margin-bottom:10px">
 <div class="fg" style="flex:1">
@@ -795,7 +796,8 @@ let sortCol='id',sortAsc=true,currentUser=null;
 // BUILD SEED — popule affaires[] avec les données démo
 // ════════════════════════════════════════
 function buildSeedData(){}
-function fmt(n){if(!n&&n!==0)return'—';return new Intl.NumberFormat('fr-FR').format(Math.round(n))+' €';}
+const crmMoneyFormat=new Intl.NumberFormat('fr-FR');
+function fmt(n){if(!n&&n!==0)return'—';return crmMoneyFormat.format(Math.round(n))+' €';}
 function fmtK(n){if(!n&&n!==0)return'—';if(Math.abs(n)>=1000)return(n/1000).toFixed(0)+'k €';return Math.round(n)+' €';}
 function isRetard(a){return !!a.date&&a.date<crmNow().toISOString().slice(0,10)&&!['Order','Perdu','En veille'].includes(a.stade);}
 function isDormant(a){
@@ -935,7 +937,7 @@ function getFiltered(){
     if(fp&&a.produit!==fp)return false;
     if(fr&&a.regionId!==fr)return false;
     if(fs&&a.stade!==fs)return false;
-    if(fq&&![a.client,a.commercial,a.produit,a.interlocuteur,a.categorie].join(' ').toLowerCase().includes(fq))return false;
+    if(fq&&![a.client,a.commercial,a.produit,a.interlocuteur].join(' ').toLowerCase().includes(fq))return false;
     if(fd&&a.created_at){var daysAgo=crmNow();daysAgo.setDate(daysAgo.getDate()-fd);if(new Date(a.created_at)<daysAgo)return false;}
     return true;
   });
@@ -948,11 +950,20 @@ function getFiltered(){
 function applyFilters(){
   if(!currentUser)return;
   const d=getFiltered();
-  renderKanban(d);renderTable(d);renderAgenda(d);
-  if(currentUser.role!=='commercial'){renderDashboard(d);renderPerformance(d);}
-  else{renderCommercialDashboard(d);renderPerformance(d);}
-  renderComms(d);
-  renderForecast(getFiltered());
+  // Uniquement la vue visible : les autres seront recalculées à leur ouverture.
+  const view=document.querySelector('.view.active')?.id||'view-kanban';
+  switch(view){
+    case 'view-kanban':renderKanban(d);break;
+    case 'view-liste':renderTable(d);break;
+    case 'view-agenda':renderAgenda(d);break;
+    case 'view-dashboard':
+      if(currentUser.role==='commercial')renderCommercialDashboard(d);
+      else renderDashboard(d);
+      break;
+    case 'view-performance':renderPerformance(d);break;
+    case 'view-forecast':renderForecast(d);break;
+    case 'view-comms':renderComms(d);break;
+  }
   updateSidebar(d);
 }
 
@@ -1022,7 +1033,6 @@ function cardHTML(a){
     +(a.date?'<span>\uD83D\uDCC5 '+a.date+'</span>':'')
     +'</div>'
     +'<div class="card-badges"><span class="tag tag-prod">'+crmEscape(a.produit)+'</span>'
-    +(a.categorie?'<span class="tag tag-cat">'+crmEscape(a.categorie)+'</span>':'')
     +(dorm?'<span class="tag tag-warn">\uD83D\uDE34 '+daysSince(a.updated)+'j</span>':'')
     +'</div>'
     +'<div class="card-footer"><div><div class="card-marge" style="color:'+(a.marge?'var(--accent2)':'var(--muted)')+'">'+mH+'</div>'+caH+'</div>'
@@ -1058,7 +1068,6 @@ function renderKanban(data){
           </div>
           <div class="card-badges">
             <span class="tag tag-prod">${crmEscape(a.produit)}</span>
-            ${a.categorie?`<span class="tag tag-cat">${crmEscape(a.categorie)}</span>`:''}
             ${dorm?`<span class="tag tag-warn">😴 ${daysSince(a.lastFollowup||a.created_at)}j</span>`:''}
           </div>
           <div class="card-footer">
@@ -1091,9 +1100,9 @@ function renderTable(data){
   const showR=currentUser.role==='n2';
   document.getElementById('th-region').style.display=showR?'':'none';
   const sorted=[...data].sort((a,b)=>{
-    let va=sortCol==='stade'?STAGES.indexOf(a.stade):(a[sortCol]||''),vb=sortCol==='stade'?STAGES.indexOf(b.stade):(b[sortCol]||'');
-    if(typeof va==='string'){va=va.toLowerCase();vb=vb.toLowerCase();}
-    return sortAsc?(va>vb?1:-1):(va<vb?1:-1);
+    const value=a=>sortCol==='stade'?STAGES.indexOf(a.stade):sortCol==='marge'?Number(a.marge||0):String(sortCol==='region'?regionById(a.regionId).name:(a[sortCol]??'')).toLowerCase();
+    const va=value(a),vb=value(b),cmp=va===vb?0:va>vb?1:-1;
+    return sortAsc?cmp:-cmp;
   });
   // Banner filtre spécial retard/dormant
   var _tbl=document.getElementById('table-content')||document.getElementById('table-body').parentElement.parentElement;
@@ -1170,7 +1179,6 @@ function renderAgenda(data){
         <div class="agenda-client">${crmEscape(a.client)}</div>
         <div class="agenda-meta">
           <span style="color:${col}">● ${a.stade}</span> &nbsp;·&nbsp; ${crmEscape(a.commercial)} &nbsp;·&nbsp; ${crmEscape(a.produit)}
-          ${a.categorie?` &nbsp;·&nbsp; <span style="color:var(--accent2)">${crmEscape(a.categorie)}</span>`:''}
         </div>
         ${a.nextAction?`<div class="agenda-comment">→ ${crmEscape(a.nextAction)}</div>`:'<div class="agenda-comment">Prochaine action à définir</div>'}
       </div>
