@@ -228,7 +228,9 @@ td{padding:9px 10px;font-size:13px}
 .tag-add{display:flex;gap:6px;margin-top:5px}
 .tag-add input{flex:1;padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px}
 .tag-add input:focus{outline:none;border-color:var(--accent)}
-.user-row{display:grid;grid-template-columns:1fr 80px 100px 55px 22px;gap:6px;align-items:center;margin-bottom:6px}
+.user-row{display:grid;grid-template-columns:minmax(130px,1fr) 100px 120px minmax(100px,120px) 22px;gap:7px;align-items:center;margin-bottom:7px}
+.user-row input[id^="up-"]{font-size:15px;letter-spacing:1px;min-width:0;padding:8px 10px}
+@media(max-width:760px){.user-row{grid-template-columns:minmax(100px,1fr) 100px 110px minmax(90px,110px) 22px;gap:5px}.user-row input[id^="up-"]{font-size:14px}}
 .user-row input,.user-row select{padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;width:100%}
 .user-row input:focus,.user-row select:focus{outline:none;border-color:var(--accent)}
 .region-card{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px}
@@ -302,6 +304,7 @@ td{padding:9px 10px;font-size:13px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
+.crm-family-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 18px 12px}.crm-family-card{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 12px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:9px;font-size:11px;color:var(--muted)}.crm-family-card strong{font-size:12px;color:var(--accent);margin-right:4px}.crm-family-tag{font-size:9px;color:var(--accent);margin-left:5px;border:1px solid var(--border);border-radius:8px;padding:1px 5px;white-space:nowrap}@media(max-width:520px){.crm-family-summary{grid-template-columns:1fr;margin-left:12px;margin-right:12px}}
 /* Toggle type affaire */
 .type-toggle{display:flex;gap:6px;margin:4px 0;}
 .type-btn{flex:1;padding:8px 4px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;}
@@ -711,7 +714,7 @@ body{font-family:system-ui,-apple-system,sans-serif}header{height:66px;backgroun
 <div class="stab-panel active" id="stab-users">
 <div class="settings-section">
 <h3>Utilisateurs &amp; accès PIN</h3>
-<div style="display:grid;grid-template-columns:1fr 80px 100px 55px 22px;gap:6px;margin-bottom:6px">
+<div style="display:grid;grid-template-columns:minmax(130px,1fr) 100px 120px minmax(100px,120px) 22px;gap:7px;margin-bottom:6px">
 <span style="font-size:10px;color:var(--muted);text-transform:uppercase">Nom</span>
 <span style="font-size:10px;color:var(--muted);text-transform:uppercase">Rôle</span>
 <span style="font-size:10px;color:var(--muted);text-transform:uppercase">Région</span>
@@ -874,19 +877,21 @@ function getTypeBadge(type){
 
 
 
+function crmIsExecutive(role){return role==='admin'||role==='direction'||role==='n2';}
+
 function setupUI(){
   const u=currentUser;
   const av=document.getElementById('user-avatar');
   av.textContent=u.name.slice(0,1).toUpperCase();
-  av.style.background=u.role==='n2'?'var(--warn)':u.role==='n1'?'var(--success)':'var(--accent)';
+  av.style.background=u.role==='admin'?'var(--danger)':crmIsExecutive(u.role)?'var(--warn)':u.role==='n1'?'var(--success)':'var(--accent)';
   document.getElementById('user-name-chip').textContent=u.name;
   const rb=document.getElementById('region-badge');
-  if(u.regionId==='all'){rb.textContent='Direction';rb.style.cssText='background:rgba(255,159,67,.2);color:#ffbe7d';}
+  if(u.regionId==='all'){rb.textContent=u.role==='admin'?'Admin':'Direction';rb.style.cssText='background:rgba(255,159,67,.2);color:#ffbe7d';}
   else{const r=regionById(u.regionId);rb.textContent=r.name;rb.style.cssText=`background:${r.color}33;color:${r.color}`;}
-  document.getElementById('settings-btn').style.display=u.role==='n2'?'inline-flex':'none';
-  document.getElementById('fw-region').style.display=u.role==='n2'?'block':'none';
+  document.getElementById('settings-btn').style.display=crmIsExecutive(u.role)?'inline-flex':'none';
+  document.getElementById('fw-region').style.display=crmIsExecutive(u.role)?'block':'none';
   document.getElementById('fw-commercial').style.display=u.role==='commercial'?'none':'block';
-  document.getElementById('th-region').style.display=u.role==='n2'?'':'none';
+  document.getElementById('th-region').style.display=crmIsExecutive(u.role)?'':'none';
   document.getElementById('nav-dash').style.display='';
   document.getElementById('nav-perf').style.display='';
   /* Onglet Communications retiré de la proposition. */
@@ -911,13 +916,13 @@ function populateSelects(){
   const fr=document.getElementById('f-region');
   fr.innerHTML='<option value="">Toutes</option>'+cfg.regions.map(r=>`<option value="${r.id}">${crmEscape(r.name)}</option>`).join('');
   // Commercial filter
-  let comms=u.role==='n2'?allComms():cfg.commerciaux[u.regionId]||[];
+  let comms=crmIsExecutive(u.role)?allComms():cfg.commerciaux[u.regionId]||[];
   document.getElementById('f-commercial').innerHTML='<option value="">Tous</option>'+comms.map(c=>`<option>${crmEscape(c)}</option>`).join('');
   // Produit filter
   document.getElementById('f-produit').innerHTML='<option value="">Tous</option>'+cfg.produits.map(p=>`<option>${crmEscape(p)}</option>`).join('');
   // Modal selects
   document.getElementById('f-prod').innerHTML=cfg.produits.map(p=>`<option>${crmEscape(p)}</option>`).join('');
-  let mComms=u.role==='n2'?allComms():u.role==='n1'?cfg.commerciaux[u.regionId]||[]:[u.name];
+  let mComms=crmIsExecutive(u.role)?allComms():u.role==='n1'?cfg.commerciaux[u.regionId]||[]:[u.name];
   document.getElementById('f-comm').innerHTML=mComms.map(c=>`<option>${crmEscape(c)}</option>`).join('');
   document.getElementById('f-region-aff').innerHTML=cfg.regions.map(r=>`<option value="${r.id}">${crmEscape(r.name)}</option>`).join('');
 }
@@ -1020,7 +1025,7 @@ function updateSidebar(data){
 }
 
 function cardHTML(a){
-  var showR=currentUser.role==='n2';
+  var showR=crmIsExecutive(currentUser.role);
   var ret=isRetard(a),dorm=isDormant(a);
   var same=affaires.filter(function(x){return x.client===a.client&&x.id!==a.id;}).length;
   var mb=same>0?'<span class="multi-badge">+'+same+'</span>':'';
@@ -1050,7 +1055,7 @@ function cardHTML(a){
 // ════════════════════════════════════════
 function renderKanban(data){
   if(!currentUser)return;
-  const showR=currentUser.role==='n2';
+  const showR=crmIsExecutive(currentUser.role);
   const KANBAN_STAGES=['Suspect','Possible','Analyse','Négociation','Closing','Order'];
   const veilleCards=data.filter(a=>a.stade==='En veille');
   let kanbanHTML=KANBAN_STAGES.map(stage=>{
@@ -1102,7 +1107,7 @@ function renderKanban(data){
 // ════════════════════════════════════════
 function renderTable(data){
   if(!currentUser)return;
-  const showR=currentUser.role==='n2';
+  const showR=crmIsExecutive(currentUser.role);
   document.getElementById('th-region').style.display=showR?'':'none';
   const sorted=[...data].sort((a,b)=>{
     const value=a=>sortCol==='stade'?STAGES.indexOf(a.stade):sortCol==='marge'?Number(a.marge||0):String(sortCol==='region'?regionById(a.regionId).name:(a[sortCol]??'')).toLowerCase();
@@ -1278,7 +1283,7 @@ function renderDashboard(data){
   // Objectifs par région (pour n2 et n1 SANS filtre commercial actif)
   const fcDash=(document.getElementById('f-commercial')||{}).value||'';
   let objHtml='';
-  if(currentUser.role==='n2'&&!fcDash){
+  if(crmIsExecutive(currentUser.role)&&!fcDash){
     const rows=cfg.regions.map(r=>{
       const rData=data.filter(a=>a.regionId===r.id);
       const achieved=rData.filter(a=>a.stade==='Order'&&crmMonth(a)===mCur).reduce((s,a)=>s+(a.marge||0),0);
@@ -1291,7 +1296,7 @@ function renderDashboard(data){
   }
 
   // Commerciaux
-  let commsForDash=currentUser.role==='n2'?allComms():cfg.commerciaux[currentUser.regionId]||[];
+  let commsForDash=crmIsExecutive(currentUser.role)?allComms():cfg.commerciaux[currentUser.regionId]||[];
   const commData=commsForDash.map((c,i)=>({c,i,val:data.filter(a=>a.commercial===c&&['Analyse','Négociation','Closing'].includes(a.stade)).reduce((s,a)=>s+(a.marge||0),0)})).filter(x=>x.val>0);
   const commMax=Math.max(...commData.map(x=>x.val),1);
   const prodMax=Math.max(...cfg.produits.map(p=>data.filter(a=>a.produit===p&&a.stade!=='Perdu').reduce((s,a)=>s+(a.marge||0),0)),1);
@@ -1476,7 +1481,7 @@ function renderPerformanceBase(data){
 
   // ── COMMERCIAL LIST ──
   var comList=[];
-  if(currentUser.role==='n2'){
+  if(crmIsExecutive(currentUser.role)){
     for(var ri=0;ri<cfg.regions.length;ri++){
       var reg=cfg.regions[ri];var names=cfg.commerciaux[reg.id]||[];
       for(var ci=0;ci<names.length;ci++)comList.push({c:names[ci],r:reg});
@@ -1692,8 +1697,7 @@ function renderPerformanceBase(data){
     h+='</div></div>';
   }
 
-  // Classement
-  h+='<div class="chart-card" style="margin-bottom:14px">';
+  // Classement et détail mensuel réunis dans un tableau classé par marge signée du mois.
   // ── Graphe cumulé : objectif adapté au filtre actif (commercial ou région) ──
   var fcPerf=(document.getElementById('f-commercial')||{}).value||'';
   var frPerf=(document.getElementById('f-region')||{}).value||'';
@@ -1752,77 +1756,20 @@ function renderPerformanceBase(data){
   }
   h+='</div>';
   h+='</div>';
-  if(!filteredCommCheck){
-  h+='<div class="chart-title">👤 Classement commerciaux — Marge cumulée année calendaire</div>';
-  if(ranking.length===0){
-    h+='<div style="text-align:center;padding:20px;color:var(--muted)">Ajoutez des affaires Order pour voir le classement</div>';
-  } else {
-    h+='<div style="display:flex;flex-direction:column;gap:7px">';
-    var medals=['🥇','🥈','🥉'];
-    for(var rki=0;rki<ranking.length;rki++){
-      var rk=ranking[rki];
-      var medal=rki<3?medals[rki]:(rki+1)+'';
-      var bp=Math.round(rk.ccumul/maxCumul*100);
-      var col=PALETTE[rki%PALETTE.length];
-      h+='<div style="display:grid;grid-template-columns:26px 140px 1fr 100px 130px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">';
-      h+='<span style="font-family:DM Serif Display,serif;font-size:15px;color:'+(rki===0?'#ffd700':rki===1?'#c0c0c0':rki===2?'#cd7f32':'var(--muted)')+'">'+medal+'</span>';
-      h+='<div><div style="font-size:13px;font-weight:600">'+rk.c+'</div><div style="font-size:10px;color:'+rk.r.color+'">'+crmEscape(rk.r.name)+'</div></div>';
-      // Barre marge cumulée
-      h+='<div>';
-      h+='<div style="height:18px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-bottom:3px"><div style="width:'+bp+'%;height:100%;border-radius:4px;background:'+col+';display:flex;align-items:center;padding:0 6px;font-size:10px;color:rgba(255,255,255,.9)">'+rk.act+' actives</div></div>';
-      // Mini sparkline 6 mois
-      h+=miniSpark(rk.monthly.slice(6),col);
-      h+='</div>';
-      // Marge cumulée + objectif annuel
-      h+='<div><div style="font-size:13px;font-weight:700;color:var(--success)">'+fmtK(rk.ccumul)+'</div>';
-      h+='<div style="font-size:10px;color:var(--muted)">12 mois | M: '+fmtK(rk.com)+'</div></div>';
-      // Atteinte objectif
-      h+='<div>';
-      if(rk.objA){
-        var oc=rk.pctA>=100?'var(--success)':rk.pctA>=60?'var(--warn)':'var(--danger)';
-        h+='<div style="font-size:11px;font-weight:700;color:'+oc+'">'+rk.pctA+'% obj. annuel</div>';
-        h+='<div style="font-size:10px;color:var(--muted)">'+fmtK(rk.ccumul)+' / '+fmtK(rk.objA)+'</div>';
-        h+='<div style="font-size:10px;color:var(--muted)">Obj. M: '+fmtK(rk.objM)+(rk.pctM!==null?' → '+rk.pctM+'%':'')+'</div>';
-      } else {
-        h+='<span style="font-size:10px;color:var(--muted)">Objectif non défini</span>';
-      }
-      h+='</div></div>';
-    }
-    h+='</div>';
-  }
-  } // Classement réservé aux vues collectives
-  h+='</div>';
-
-  // Tableau détail mensuel
-  var cols=['Commercial'];
-  if(currentUser.role==='n2')cols.push('Région');
-  cols=cols.concat(['Actives','Pipeline','Marge M','vs M-1','Obj. M (ann/12)','Atteinte M','Cumul 12m','Obj. annuel','Atteinte A','Taux M']);
-  h+='<div class="chart-card">';
-  h+='<div class="chart-title">📋 Détail mensuel — '+ymLabel(mCur)+' vs '+ymLabel(mPrev)+'</div>';
-  h+='<table style="width:100%;border-collapse:collapse"><thead><tr>';
-  for(var ci3=0;ci3<cols.length;ci3++)h+='<th style="text-align:left;padding:7px 9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:2px solid var(--border)">'+cols[ci3]+'</th>';
+  var monthlyRanking=ranking.slice().sort(function(a,b){return b.com-a.com;});
+  var cols=['Classement','Commercial'];
+  if(crmIsExecutive(currentUser.role))cols.push('Région');
+  cols=cols.concat(['Pipeline global','Marge signée — '+ymLabel(mCur),'Objectif mensuel','Atteinte mensuelle','Cumul signé année','Atteinte annuelle']);
+  h+='<div class="chart-card" style="margin-bottom:14px"><div class="chart-title">🏆 Classement et suivi mensuel — marge signée en '+ymLabel(mCur)+'</div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>';
+  for(var ci3=0;ci3<cols.length;ci3++)h+='<th style="text-align:left;padding:8px 9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap">'+cols[ci3]+'</th>';
   h+='</tr></thead><tbody>';
-  var hasRows=false;
-  for(var ri5=0;ri5<ranking.length;ri5++){
-    var rk2=ranking[ri5];
-    hasRows=true;
-    h+='<tr style="border-bottom:1px solid var(--border)">';
-    h+='<td style="padding:8px 9px;font-weight:600">'+rk2.c+'</td>';
-    if(currentUser.role==='n2')h+='<td style="padding:8px 9px"><span style="width:7px;height:7px;border-radius:50%;background:'+rk2.r.color+';display:inline-block;margin-right:5px"></span>'+crmEscape(rk2.r.name)+'</td>';
-    h+='<td style="padding:8px 9px">'+rk2.act+'</td>';
-    h+='<td style="padding:8px 9px;color:var(--accent2)">'+fmtK(rk2.pipe)+'</td>';
-    h+='<td style="padding:8px 9px;font-weight:600;color:var(--success)">'+fmt(rk2.com)+'</td>';
-    h+='<td style="padding:8px 9px">'+dHtml(rk2.com,rk2.cop)+'</td>';
-    h+='<td style="padding:8px 9px;color:var(--muted)">'+(rk2.objM?fmt(rk2.objM):'—')+'</td>';
-    h+='<td style="padding:8px 9px;min-width:90px">'+gauge(rk2.pctM)+'</td>';
-    h+='<td style="padding:8px 9px;font-weight:600">'+fmt(rk2.ccumul)+'</td>';
-    h+='<td style="padding:8px 9px;color:var(--muted)">'+(rk2.objA?fmt(rk2.objA):'—')+'</td>';
-    h+='<td style="padding:8px 9px;min-width:90px">'+gauge(rk2.pctA)+'</td>';
-    h+='<td style="padding:8px 9px;font-weight:600;color:var(--warn)">'+(rk2.tx!==null?rk2.tx+'%':'—')+'</td>';
-    h+='</tr>';
+  if(!monthlyRanking.length)h+='<tr><td colspan="'+cols.length+'" style="padding:20px;text-align:center;color:var(--muted)">Aucune activité — saisissez vos affaires</td></tr>';
+  for(var ri5=0;ri5<monthlyRanking.length;ri5++){
+    var rk2=monthlyRanking[ri5];h+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:9px;font-weight:700;color:var(--accent)">'+(ri5+1)+'</td><td style="padding:9px;font-weight:600">'+crmEscape(rk2.c)+'</td>';
+    if(crmIsExecutive(currentUser.role))h+='<td style="padding:9px">'+crmEscape(rk2.r.name)+'</td>';
+    h+='<td style="padding:9px;color:var(--accent2)">'+fmtK(rk2.pipe)+'</td><td style="padding:9px;font-weight:700;color:var(--success)">'+fmt(rk2.com)+'</td><td style="padding:9px">'+(rk2.objM?fmt(rk2.objM):'—')+'</td><td style="padding:9px;min-width:90px">'+gauge(rk2.pctM)+'</td><td style="padding:9px;font-weight:600">'+fmt(rk2.ccumul)+'</td><td style="padding:9px;min-width:90px">'+gauge(rk2.pctA)+'</td></tr>';
   }
-  if(!hasRows)h+='<tr><td colspan="12" style="padding:20px;text-align:center;color:var(--muted)">Aucune activité — saisissez vos affaires</td></tr>';
-  h+='</tbody></table></div>';
+  h+='</tbody></table></div><div class="ks" style="margin-top:8px">Classement trié sur la marge signée du mois · le cumul et les objectifs restent visibles pour situer la performance annuelle.</div></div>';
   h+='</div>';
 
   pc.innerHTML=h;
@@ -2226,7 +2173,7 @@ function newFromClient(){
 
 function openSettings(){
   var rb=document.getElementById('reset-demo-block');
-  if(rb) rb.style.display=(currentUser&&currentUser.role==='n2')?'block':'none';
+  if(rb) rb.style.display=(currentUser&&crmIsExecutive(currentUser.role))?'block':'none';
   renderRegions();renderProduits();renderObjectifs();renderUsers();
   document.getElementById('settings-overlay').classList.add('open');
 }
@@ -2925,7 +2872,7 @@ function renderForecast(data){
  pc.innerHTML=h+'</div>';
 }
 function _fctable(data,kind){
- const historic=!!window.crmAsOf,showR=currentUser.role==='n2';
+ const historic=!!window.crmAsOf,showR=crmIsExecutive(currentUser.role);
  let h='<div style="overflow-x:auto"><table class="forecast-table"><thead><tr><th>Client</th><th>Commercial</th>'+(showR?'<th>Région</th>':'')+'<th>Produit</th><th>Stade</th><th>Type</th><th>Marge</th><th>Prévision initiale</th><th>Prévision actuelle</th><th>Signature réelle</th><th>Prochaine action</th><th></th></tr></thead><tbody>';
  for(const a of data.slice().sort((a,b)=>(b.marge||0)-(a.marge||0))){
   const init=a.closingInitial||'',reported=a.closing&&init&&a.closing>init;
@@ -2972,7 +2919,7 @@ function renderComms(data){
   cfg.produits.forEach(function(p){h+='<option>'+p+'</option>';});
   h+='</select></div>';
   // Région filter (n2 only)
-  if(currentUser.role==='n2'){
+  if(crmIsExecutive(currentUser.role)){
     h+='<div class="filter-chip"><select id="comms-region" onchange="refreshCommsExtract()"><option value="">Toutes régions</option>';
     cfg.regions.forEach(function(r){h+='<option value="'+r.id+'">'+crmEscape(r.name)+'</option>';});
     h+='</select></div>';
@@ -3113,7 +3060,7 @@ function clearCrmFilters(){for(const id of ['f-region','f-commercial','f-produit
 const originalApply=window.crmOriginal.applyFilters;
 function metricFor(rows,ref){return{active:rows.filter(a=>!['Order','Perdu','En veille'].includes(a.stade)).length,pipeline:rows.filter(a=>['Analyse','Négociation','Closing'].includes(a.stade)).reduce((s,a)=>s+a.marge,0),dormant:rows.filter(a=>!['Order','Perdu','En veille'].includes(a.stade)&&a.lastFollowup&&(new Date(ref)-new Date(a.lastFollowup))/86400000>=DORMANT_DAYS).length};}
 function applyFilters(){if(!currentUser)return;const id=document.getElementById('history-select')?.value||'',snap=snapshots[id];if(!liveAff)return;if(!snap)liveAff=affaires;try{if(snap){affaires=clone(snap.affaires);cfg=clone(snap.cfg);}originalApply();const currentRows=getFiltered(),m=metricFor(currentRows,window.crmAsOf||new Date()),comp=document.getElementById('compare-select').value,old=snapshots[comp];let output='';if(old){affaires=clone(old.affaires);cfg=clone(old.cfg);const previousRows=getFiltered(),p=metricFor(previousRows,old.at);output='<div style="padding-top:10px;color:var(--muted)">Comparaison à périmètre filtré · '+old.label+' → '+(snap?snap.label:'Vue actuelle')+'</div><div class="cmp-grid">'+[['Affaires actives',p.active,m.active,false],['Marge pipeline',p.pipeline,m.pipeline,true]].map(([label,a,b,money])=>'<div class="cmp-card">'+label+'<br><strong>'+(money?fmt(a):a)+' → '+(money?fmt(b):b)+'</strong><br>Écart : '+(b-a>0?'+':'')+(money?fmt(b-a):b-a)+'</div>').join('')+'</div>';}
-document.getElementById('comparison').innerHTML=output;document.getElementById('history-note').textContent=snap?'Photographie figée · lecture seule':'Travail courant · historique automatique des notes et échéances';document.getElementById('snapshot-btn').style.display='none';const filters=['f-region','f-commercial','f-produit','f-stade-filter','f-date-filter','f-type-filter'].map(id=>document.getElementById(id)?.value).filter(Boolean);document.getElementById('active-filters').textContent=filters.length?'Filtres actifs : '+filters.join(' · '):'Aucun filtre actif';}finally{affaires=liveAff;cfg=liveCfg;}}
+document.getElementById('comparison').innerHTML=output;document.getElementById('history-note').textContent=snap?'Photographie figée · lecture seule':'Travail courant · historique automatique des notes et échéances';document.getElementById('snapshot-btn').style.display='none';const filters=['f-region','f-commercial','f-famille','f-produit','f-stade-filter','f-date-filter','f-type-filter'].map(id=>document.getElementById(id)?.value).filter(Boolean);document.getElementById('active-filters').textContent=filters.length?'Filtres actifs : '+filters.join(' · '):'Aucun filtre actif';}finally{affaires=liveAff;cfg=liveCfg;}}
 const originalSettings=openSettings;openSettings=function(){if(document.getElementById('history-select').value){alert('Revenez à la vue actuelle pour gérer la configuration.');return;}originalSettings();};
 function renderFollowupHistory(a){
  const box=document.getElementById('followup-history-content');
@@ -3194,7 +3141,7 @@ async function refreshCRM(){
  try{const r=await crmRpc('state');adoptState(r);applyFilters();}catch(e){alert(e.message);}
 }
 function visibleAffaires(){
- if(!currentUser)return[];if(currentUser.role==='n2')return affaires;
+ if(!currentUser)return[];if(crmIsExecutive(currentUser.role))return affaires;
  return affaires.filter(a=>currentUser.role==='commercial'?a.ownerId===currentUser.id:a.regionId===currentUser.regionId);
 }
 // Préserver le formulaire de la version 9 et son historique déroulant.
@@ -3228,7 +3175,7 @@ async function openSettings(){
   const r=await crmRpc('settings');cfg=r.config;liveCfg=cfg;
   renderRegions();renderProduits();renderObjectifs();renderUsers();
   document.querySelectorAll('.stab button').forEach(b=>{b.style.display=currentUser.role==='n1'&&!/users/.test(b.getAttribute('onclick')||'')?'none':'';});
-  document.querySelector('[onclick="addRegion()"]')?.style.setProperty('display',currentUser.role==='n2'?'':'none');
+  document.querySelector('[onclick="addRegion()"]')?.style.setProperty('display',crmIsExecutive(currentUser.role)?'':'none');
   switchStab('users',document.querySelector('.stab button[onclick*="users"]'));document.getElementById('settings-overlay').classList.add('open');
  }catch(e){alert(e.message);}
 }
@@ -3239,10 +3186,14 @@ function closeSettings(){
 }
 function renderUsers(){
  const e=crmEscape;document.getElementById('users-list').innerHTML=cfg.users.map((u,i)=>{
-  const managed=currentUser.role==='n2'||u.role==='commercial';
+  const canEditAdmin=currentUser.role==='admin'||(!cfg.users.some(x=>x.role==='admin')&&currentUser.role==='direction');
+  const managed=(crmIsExecutive(currentUser.role)&&(u.role!=='admin'||canEditAdmin))||(u.role==='commercial'&&(currentUser.role==='n1'||crmIsExecutive(currentUser.role)));
+  const roleLocked=currentUser.role==='n1'||(u.role==='admin'&&!canEditAdmin);
+  const roles=[['commercial','Commercial'],['n1','Responsable régional'],['direction','Direction']];
+  if(currentUser.role==='admin'||u.role==='admin'||!cfg.users.some(x=>x.role==='admin'))roles.push(['admin','Admin']);
   return '<div class="user-row"><input type="text" value="'+e(u.name)+'" id="un-'+i+'"'+(!managed?' disabled':'')+'>'+
-   '<select id="ur-'+i+'"'+(currentUser.role==='n1'?' disabled':'')+'>'+[['commercial','Commercial'],['n1','Responsable régional'],['n2','Direction / Administration']].map(([v,n])=>'<option value="'+v+'"'+(u.role===v?' selected':'')+'>'+n+'</option>').join('')+'</select>'+
-   '<select id="ureg-'+i+'"'+(currentUser.role==='n1'?' disabled':'')+'>'+cfg.regions.map(r=>'<option value="'+e(r.id)+'"'+(u.regionId===r.id?' selected':'')+'>'+e(r.name)+'</option>').join('')+(currentUser.role==='n2'?'<option value="all"'+(u.regionId==='all'?' selected':'')+'>Toutes</option>':'')+'</select>'+
+   '<select id="ur-'+i+'"'+(roleLocked?' disabled':'')+'>'+roles.map(([v,n])=>'<option value="'+v+'"'+(u.role===v?' selected':'')+'>'+n+'</option>').join('')+'</select>'+
+   '<select id="ureg-'+i+'"'+(currentUser.role==='n1'||(u.role==='admin'&&!canEditAdmin)?' disabled':'')+'>'+cfg.regions.map(r=>'<option value="'+e(r.id)+'"'+(u.regionId===r.id?' selected':'')+'>'+e(r.name)+'</option>').join('')+(crmIsExecutive(currentUser.role)?'<option value="all"'+(u.regionId==='all'?' selected':'')+'>Toutes</option>':'')+'</select>'+ 
    '<input type="text" inputmode="numeric" autocomplete="off" value="'+e(u.pin||'')+'" id="up-'+i+'" maxlength="6" placeholder="PIN généré"'+(!managed?' disabled':'')+'>'+
    (managed&&u.id!==currentUser.id?'<button class="tag-remove" onclick="removeUser('+i+')" title="Retirer l’accès, conserver les affaires">×</button>':'')+'</div>';
  }).join('');
@@ -3259,14 +3210,14 @@ function removeComm(regionId,idx){
 }
 function cleanOrphanUsers(){alert('Les comptes retirés sont désactivés à l’enregistrement. Leurs affaires sont conservées.');}
 function _autoSaveObj(inp){
- if(currentUser.role!=='n2')return;const key=inp.id.replace('obj-','');cfg.objectifs[key]=Number(inp.value)||0;const u=cfg.users.find(u=>u.id===key);if(u)cfg.objectifs['name_'+u.name]=cfg.objectifs[key];
+ if(!crmIsExecutive(currentUser.role))return;const key=inp.id.replace('obj-','');cfg.objectifs[key]=Number(inp.value)||0;const u=cfg.users.find(u=>u.id===key);if(u)cfg.objectifs['name_'+u.name]=cfg.objectifs[key];
 }
 async function saveSettings(){
  if(settingsBusy)return;settingsBusy=true;
  try{
   const next=JSON.parse(JSON.stringify(cfg));
   next.users.forEach((u,i)=>{u.name=document.getElementById('un-'+i)?.value.trim()||u.name;u.role=document.getElementById('ur-'+i)?.value||u.role;u.regionId=document.getElementById('ureg-'+i)?.value||u.regionId;u.pin=document.getElementById('up-'+i)?.value||'';});
-  if(currentUser.role==='n2'){
+  if(crmIsExecutive(currentUser.role)){
    next.regions.forEach(r=>{r.name=document.getElementById('rn-'+r.id)?.value.trim()||r.name;r.color=document.getElementById('rc-'+r.id)?.value||r.color;});
    document.querySelectorAll('#obj-list input[id^="obj-"]').forEach(el=>{const id=el.id.slice(4),v=Number(el.value)||0;next.objectifs[id]=v;const u=next.users.find(u=>u.id===id);if(u)next.objectifs['name_'+u.name]=v;});
   }
@@ -3293,7 +3244,7 @@ function populateSelects(){
  if(!currentUser)return;const ids=['f-region','f-commercial','f-produit'],keep=Object.fromEntries(ids.map(id=>[id,document.getElementById(id).value]));
  function fill(id,items,placeholder){const el=document.getElementById(id);el.replaceChildren();if(placeholder)el.appendChild(new Option(placeholder,''));items.forEach(([value,label])=>el.appendChild(new Option(label,value)));return el;}
  const fr=fill('f-region',cfg.regions.map(r=>[r.id,r.name]),'Toutes');fr.value=cfg.regions.some(r=>r.id===keep['f-region'])?keep['f-region']:'';
- const comms=currentUser.role==='n2'?(fr.value?(cfg.commerciaux[fr.value]||[]):allComms()):(cfg.commerciaux[currentUser.regionId]||[]);
+ const comms=crmIsExecutive(currentUser.role)?(fr.value?(cfg.commerciaux[fr.value]||[]):allComms()):(cfg.commerciaux[currentUser.regionId]||[]);
  const fc=fill('f-commercial',comms.map(c=>[c,c]),'Tous');fc.value=comms.includes(keep['f-commercial'])?keep['f-commercial']:'';
  const fp=fill('f-produit',cfg.produits.map(p=>[p,p]),'Tous');fp.value=cfg.produits.includes(keep['f-produit'])?keep['f-produit']:'';
  fill('f-prod',cfg.produits.map(p=>[p,p]));const modalComms=currentUser.role==='commercial'?[currentUser.name]:currentUser.role==='n1'?(cfg.commerciaux[currentUser.regionId]||[]):allComms();
@@ -3395,5 +3346,77 @@ document.getElementById('sb-obj-pct').parentElement.querySelector('.kl').textCon
 crmSetupSimplifiedUI();
 const crmSimplifiedOpenModal=openModal;
 openModal=function(id){crmSimplifiedOpenModal(id);document.getElementById('f-region-aff').disabled=true;};
+
+
+// Familles de produits : conserver le niveau détaillé par produit et ajouter une lecture regroupée.
+function crmFamily(product){
+ const p=String(product||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+ return ['mfp','imp/scan','m scan','impression scan','impression/scan'].includes(p)?'Impression':'Solutions';
+}
+function crmFamilyStats(rows,month){
+ return ['Impression','Solutions'].map(family=>{
+  const items=rows.filter(a=>crmFamily(a.produit)===family);
+  const signed=items.filter(a=>a.stade==='Order'&&(!month||crmMonth(a)===month));
+  const pipeline=items.filter(a=>['Analyse','Négociation','Closing'].includes(a.stade));
+  return {family,count:items.length,signedCount:signed.length,signedMargin:signed.reduce((s,a)=>s+(Number(a.marge)||0),0),pipelineMargin:pipeline.reduce((s,a)=>s+(Number(a.marge)||0),0)};
+ });
+}
+const crmBaseGetFiltered=getFiltered;
+getFiltered=function(){
+ const rows=crmBaseGetFiltered(),family=document.getElementById('f-famille')?.value||'';
+ return family?rows.filter(a=>crmFamily(a.produit)===family):rows;
+};
+const crmBasePopulateSelects=populateSelects;
+function crmRefreshProductFilter(resetInvalid){
+ const family=document.getElementById('f-famille'),product=document.getElementById('f-produit');
+ if(!family||!product)return;
+ const selected=product.value,all=cfg.produits||[],choices=family.value?all.filter(p=>crmFamily(p)===family.value):all;
+ product.replaceChildren(new Option('Tous',''));
+ choices.forEach(p=>product.add(new Option(p,p)));
+ if(choices.includes(selected))product.value=selected;
+ else if(resetInvalid)product.value='';
+}
+populateSelects=function(){
+ const keep=document.getElementById('f-famille')?.value||'';
+ crmBasePopulateSelects();
+ let select=document.getElementById('f-famille');
+ if(!select){
+  const product=document.getElementById('f-produit')?.closest('.fg');
+  if(!product)return;
+  const wrap=document.createElement('div');wrap.className='fg';wrap.innerHTML='<label>Famille</label><select id="f-famille" onchange="applyFilters()"><option value="">Toutes</option><option>Impression</option><option>Solutions</option></select>';
+  product.before(wrap);select=wrap.querySelector('select');
+ }
+ select.value=['Impression','Solutions'].includes(keep)?keep:'';
+ crmRefreshProductFilter(true);
+ select.onchange=()=>{crmRefreshProductFilter(true);applyFilters();};
+ const product=document.getElementById('f-produit');
+ product.onchange=()=>{if(product.value)select.value=crmFamily(product.value);crmRefreshProductFilter(false);applyFilters();};
+};
+const crmBaseClearFilters=clearCrmFilters;
+clearCrmFilters=function(){crmBaseClearFilters();const f=document.getElementById('f-famille');if(f){f.value='';crmRefreshProductFilter(true);applyFilters();}};
+const crmBaseRenderProduits=renderProduits;
+renderProduits=function(){
+ crmBaseRenderProduits();
+ document.querySelectorAll('#produit-list .tag-item').forEach(tag=>{
+  const product=tag.firstChild?.textContent?.trim()||'';
+  const family=crmFamily(product),badge=document.createElement('small');badge.className='crm-family-tag';badge.textContent=family;tag.insertBefore(badge,tag.querySelector('button'));
+ });
+};
+function crmFamilySummary(rows,month){
+ return '<section class="crm-family-summary" aria-label="Synthèse par famille">'+crmFamilyStats(rows,month).map(x=>'<div class="crm-family-card"><strong>'+x.family+'</strong><span>'+x.count+' affaires</span><span>Pipeline : '+fmt(x.pipelineMargin)+'</span>'+(month?'<span>Signé : '+fmt(x.signedMargin)+' · '+x.signedCount+' affaire(s)</span>':'<span>Signé : '+fmt(x.signedMargin)+' · '+x.signedCount+' affaire(s)</span>')+'</div>').join('')+'</section>';
+}
+const crmBaseFamilyDashboard=renderDashboard;
+renderDashboard=function(rows){
+ crmBaseFamilyDashboard(rows);
+ const content=document.getElementById('dash-content');
+ if(content)content.insertAdjacentHTML('afterbegin',crmFamilySummary(rows,''));
+};
+const crmBaseFamilyPerformance=renderPerformance;
+renderPerformance=function(rows){
+ crmBaseFamilyPerformance(rows);
+ const content=document.getElementById('perf-content'),month=document.getElementById('perf-mois-sel')?.value||ym(0);
+ const layout=content?.firstElementChild;
+ if(layout)layout.insertAdjacentHTML('afterbegin',crmFamilySummary(rows,month));
+};
 
 </script></body></html>
