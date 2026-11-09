@@ -620,7 +620,11 @@ body{font-family:system-ui,-apple-system,sans-serif}header{height:66px;backgroun
 <div class="fg" style="margin-bottom:12px"><div class="fl">Prochaine action</div><input class="fi" id="f-next-action" placeholder="Ex. présenter la proposition au décideur" value=""/></div><div class="fr3" style="margin-bottom:10px">
 <div class="fg">
 <div class="fl">Mois de closing prévu <span class="ci-badge" id="ci-badge" style="display: inline; background: rgba(107, 114, 153, 0.15); color: var(--muted);">Init: Jun 26</span></div>
-<input class="fi" id="f-closing" onchange="onClosingChange(this)" type="month" value=""/>
+<input id="f-closing" type="hidden" value=""/>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px">
+<select class="fi" id="f-closing-month" aria-label="Mois de closing prévu" onchange="updateClosingValue()"></select>
+<select class="fi" id="f-closing-year" aria-label="Année de closing prévue" onchange="updateClosingValue()"></select>
+</div>
 <div id="ci-history" style="display:none;margin-top:5px"></div>
 </div>
 <div class="fg"><div class="fl">Date prochaine action</div><input class="fi" id="f-date" type="date" value=""/></div>
@@ -2031,7 +2035,7 @@ function openModal(id){
     document.getElementById('f-proba').value=a.proba||'';
     updateValoFields();
     document.getElementById('f-date').value=a.date||'';
-    document.getElementById('f-closing').value=a.closing||'';
+    setClosingFields(a.closing||'');
     // Closing initial + historique
     (function(){
       var cib=document.getElementById('ci-badge');
@@ -2085,7 +2089,8 @@ function openModal(id){
     setTypeAffaire('');
     ['f-client','f-ville','f-adresse','f-int1','f-poste1','f-tel1','f-email1',
      'f-int2','f-poste2','f-tel2','f-email2','f-categorie','f-marge',
-     'f-date','f-closing','f-comment'].forEach(function(x){document.getElementById(x).value='';})
+     'f-date','f-comment'].forEach(function(x){document.getElementById(x).value='';})
+    setClosingFields('');
     var _cib2=document.getElementById('ci-badge');if(_cib2)_cib2.style.display='none';
     var _cih2=document.getElementById('ci-history');if(_cih2)_cih2.style.display='none';
     var _cat2=document.getElementById('f-created-at');if(_cat2)_cat2.value='—';
@@ -2115,6 +2120,30 @@ function updateProba(){
   updateValoFields();
 }
 
+function setClosingFields(value){
+ const yearField=document.getElementById('f-closing-year');
+ const monthField=document.getElementById('f-closing-month');
+ const [savedYear,savedMonth]=value.split('-');
+ const currentYear=crmNow().getFullYear();
+ const years=new Set(Array.from({length:8},(_,i)=>currentYear-2+i));
+ if(/^\d{4}$/.test(savedYear))years.add(Number(savedYear));
+ yearField.replaceChildren(new Option('Année',''),...[...years].sort((a,b)=>a-b).map(year=>new Option(year,year)));
+ const months=new Intl.DateTimeFormat('fr-FR',{month:'short',timeZone:'UTC'});
+ monthField.replaceChildren(new Option('Mois',''),...Array.from({length:12},(_,i)=>
+  new Option(months.format(new Date(Date.UTC(2026,i,1))),String(i+1).padStart(2,'0'))));
+ yearField.value=savedYear||'';
+ monthField.value=savedMonth||'';
+ document.getElementById('f-closing').value=monthField.value&&yearField.value?yearField.value+'-'+monthField.value:'';
+}
+
+function updateClosingValue(){
+ const year=document.getElementById('f-closing-year').value;
+ const month=document.getElementById('f-closing-month').value;
+ const closing=document.getElementById('f-closing');
+ closing.value=year&&month?year+'-'+month:'';
+ onClosingChange(closing);
+}
+
 function updateValoFields(){
  const stade=document.getElementById('f-stade').value,early=['Suspect','Possible'].includes(stade),hold=stade==='En veille';
  document.getElementById('f-marge').disabled=early;document.getElementById('f-marge').style.opacity=early?'.5':'1';document.getElementById('f-marge').style.cursor=early?'not-allowed':'';
@@ -2122,7 +2151,7 @@ function updateValoFields(){
  document.getElementById('marge-hint').textContent=early?'À renseigner à partir d’Analyse.':hold?'Estimation conservée, exclue du pipeline actif.':'Marge de l’affaire à la signature.';
  document.getElementById('marge-hint').style.display='block';
  document.getElementById('valo-stade-msg').textContent=early?'— à partir d’Analyse':hold?'— estimation conservée':'— indicateur principal';
- document.getElementById('f-closing').disabled=early;
+ for(const id of ['f-closing-month','f-closing-year'])document.getElementById(id).disabled=early;
  document.getElementById('signed-block').style.display=stade==='Order'?'block':'none';
 }
 function autoRegion(){var c=document.getElementById('f-comm').value;document.getElementById('f-region-aff').value=commRegion(c);}
@@ -2853,7 +2882,8 @@ function renderForecast(data){
  const series=months.map(m=>({month:m,...forecastNumbers(data,m)})),max=Math.max(1,...series.map(x=>x.total));
  const labels={signed:'Déjà signé',pending:'Restant à signer',total:'Total potentiel du mois',target:'Objectif mensuel'};
  let h='<div style="padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px"><div><h2 style="font-size:22px">📈 Forecast — '+ymLabel(selected)+'</h2><p style="font-size:12px;color:var(--muted);margin-top:6px">Marge de l’affaire à la signature · '+(window.crmAsOf?'Photographie figée, en lecture seule':'Portefeuille actuel, prévisions actualisées')+'</p></div><select id="forecast-mois" aria-label="Mois du forecast" onchange="applyFilters()" style="padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:7px">';
- let opts=new Set(Array.from({length:19},(_,i)=>shift(asOf,i-12)));opts.add(selected);months.forEach(m=>opts.add(m));
+ let opts=new Set(Array.from({length:25},(_,i)=>shift(asOf,i-12)));opts.add(selected);months.forEach(m=>opts.add(m));
+ for(const affaire of data){if(/^\d{4}-(0[1-9]|1[0-2])$/.test(affaire.closing||''))opts.add(affaire.closing);}
  h+=[...opts].sort().map(m=>'<option value="'+m+'"'+(m===selected?' selected':'')+'>'+ymLabel(m)+'</option>').join('')+'</select></div>';
  const pct=target?Math.round(f.signedMargin/target*100):null;
  const kpi=(id,label,value,sub,color)=>'<div class="forecast-kpi"><div class="fk-label">'+label+'</div><div class="fk-val" id="'+id+'" data-value="'+value+'" style="color:'+color+'">'+(value===null?'—':fmt(value))+'</div><div class="fk-sub">'+sub+'</div></div>';
